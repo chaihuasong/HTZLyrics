@@ -1,0 +1,8 @@
+﻿<resources>
+    <string name="app_name">原文库</string>
+    <string name="def_text">桌面上的经典，开启视听新高度</string>
+    <string name="loading_text">正在获取原文...</string>
+    <string name="goto_search_text">搜索原文</string>
+    <string name="load_error_text">加载原文出错</string>
+    <string name="nonsupport_text">不支持该格式原文文件显示</string>
+</resources>
