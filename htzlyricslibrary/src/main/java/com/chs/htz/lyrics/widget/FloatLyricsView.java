@@ -66,7 +66,7 @@ public class FloatLyricsView extends AbstractLrcView {
         int screensWidth = displayMetrics.widthPixels;
 
         //设置歌词的最大宽度
-        int textMaxWidth = screensWidth / 5 * 4;
+        int textMaxWidth = screensWidth - 40;
         setTextMaxWidth(textMaxWidth);
 
     }
