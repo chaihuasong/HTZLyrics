@@ -517,11 +517,11 @@ public abstract class AbstractLrcView extends View {
                 String defText = getDefText();
                 float textWidth = LyricsUtils.getTextWidth(mPaint, defText);
                 int textHeight = LyricsUtils.getTextHeight(mPaint);
-                float hlWidth = textWidth / 2;
+                float hlWidth = textWidth;
                 float x = (getWidth() - textWidth) / 2;
                 float y = (getHeight() + textHeight) / 2;
                 LyricsUtils.drawOutline(canvas, mPaintOutline, defText, x, y);
-                //LyricsUtils.drawDynamicText(canvas, mPaint, mPaintHL, mPaintColors, mPaintHLColors, defText, hlWidth, x, y);
+                LyricsUtils.drawDynamicText(canvas, mPaint, mPaintHL, mPaintColors, mPaintHLColors, defText, hlWidth, x, y);
             } else if (mLrcStatus == LRCSTATUS_LOADING || mLrcStatus == LRCSTATUS_ERROR || mLrcStatus == LRCSTATUS_NONSUPPORT) {
                 //绘画加载中文本
                 String text = getDefText();
