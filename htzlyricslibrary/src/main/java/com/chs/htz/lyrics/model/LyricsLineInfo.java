@@ -2,6 +2,8 @@ package com.chs.htz.lyrics.model;
 
 import android.text.TextUtils;
 
+import com.chs.htz.lyrics.utils.LrcTextUtils;
+
 import java.util.List;
 
 /**
@@ -94,8 +96,9 @@ public class LyricsLineInfo {
     }
 
     public void setLineLyrics(String mLineLyrics) {
-        if (!TextUtils.isEmpty(mLineLyrics)) {
-            this.mLineLyrics = mLineLyrics.replaceAll("\r|\n", "");
+        String trimLyricText = LrcTextUtils.trimLricText(mLineLyrics);
+        if (!TextUtils.isEmpty(trimLyricText)) {
+            this.mLineLyrics = trimLyricText.replaceAll("\r|\n", "");
         }
     }
 

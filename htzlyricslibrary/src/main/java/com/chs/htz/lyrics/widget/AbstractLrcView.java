@@ -1118,6 +1118,7 @@ public abstract class AbstractLrcView extends View {
             mPaint.setTextSize(mFontSize);
             mPaintHL.setTextSize(mFontSize);
             mPaintOutline.setTextSize(mFontSize);
+            mExtraLrcPaint.setTextSize(mFontSize);
 
             //搜索歌词回调不为空
             if (mSearchLyricsListener != null) {

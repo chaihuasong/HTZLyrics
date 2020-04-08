@@ -12,6 +12,7 @@ import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Message;
+import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.view.Display;
@@ -26,6 +27,7 @@ import com.chs.htz.lyrics.LyricsReader;
 import com.chs.htz.lyrics.model.LyricsInfo;
 import com.chs.htz.lyrics.model.LyricsLineInfo;
 import com.chs.htz.lyrics.utils.ColorUtils;
+import com.chs.htz.lyrics.utils.LrcTextUtils;
 import com.chs.htz.lyrics.utils.LyricsUtils;
 import com.chs.htz.lyrics.utils.TimeUtils;
 
@@ -290,16 +292,16 @@ public class ManyLyricsView extends AbstractLrcView {
         Paint paint = getPaint();
         Paint paintHL = getPaintHL();
         Paint extraLrcPaint = getExtraLrcPaint();
-        Paint extraLrcPaintHL = getExtraLrcPaintHL();
+        //Paint extraLrcPaintHL = getExtraLrcPaintHL();
         int lyricsLineNum = getLyricsLineNum();
         int splitLyricsLineNum = getSplitLyricsLineNum();
         int splitLyricsWordIndex = getSplitLyricsWordIndex();
-        int extraSplitLyricsLineNum = getExtraSplitLyricsLineNum();
-        int extraSplitLyricsWordIndex = getExtraSplitLyricsWordIndex();
+        //int extraSplitLyricsLineNum = getExtraSplitLyricsLineNum();
+        //int extraSplitLyricsWordIndex = getExtraSplitLyricsWordIndex();
         float spaceLineHeight = getSpaceLineHeight();
-        float extraLrcSpaceLineHeight = getExtraLrcSpaceLineHeight();
+        //float extraLrcSpaceLineHeight = getExtraLrcSpaceLineHeight();
         float lyricsWordHLTime = getLyricsWordHLTime();
-        float translateLyricsWordHLTime = getTranslateLyricsWordHLTime();
+        //float translateLyricsWordHLTime = getTranslateLyricsWordHLTime();
 
 
         //获取中间位置
@@ -313,7 +315,7 @@ public class ManyLyricsView extends AbstractLrcView {
         List<LyricsLineInfo> splitLyricsLineInfos = lyricsLineInfo.getSplitLyricsLineInfos();
         float lineBottomY = drawDownLyrics(canvas, paint, paintHL, splitLyricsLineInfos, splitLyricsLineNum, splitLyricsWordIndex, spaceLineHeight, lyricsWordHLTime, mCentreY);
         //画额外歌词
-        lineBottomY = drawDownExtraLyrics(canvas, extraLrcPaint, extraLrcPaintHL, lyricsLineNum, extraSplitLyricsLineNum, extraSplitLyricsWordIndex, extraLrcSpaceLineHeight, lyricsWordHLTime, translateLyricsWordHLTime, lineBottomY);
+        //lineBottomY = drawDownExtraLyrics(canvas, extraLrcPaint, extraLrcPaintHL, lyricsLineNum, extraSplitLyricsLineNum, extraSplitLyricsWordIndex, extraLrcSpaceLineHeight, lyricsWordHLTime, translateLyricsWordHLTime, lineBottomY);
 
 
         //画当前行正面的歌词
@@ -324,7 +326,7 @@ public class ManyLyricsView extends AbstractLrcView {
             List<LyricsLineInfo> lyricsLineInfos = downLyricsLineInfo.getSplitLyricsLineInfos();
             lineBottomY = drawDownLyrics(canvas, paint, paintHL, lyricsLineInfos, -1, -2, spaceLineHeight, -1, lineBottomY);
             //画额外歌词
-            lineBottomY = drawDownExtraLyrics(canvas, extraLrcPaint, extraLrcPaintHL, i, -1, -2, extraLrcSpaceLineHeight, -1, -1, lineBottomY);
+            //lineBottomY = drawDownExtraLyrics(canvas, extraLrcPaint, extraLrcPaintHL, i, -1, -2, extraLrcSpaceLineHeight, -1, -1, lineBottomY);
         }
 
 
@@ -335,7 +337,7 @@ public class ManyLyricsView extends AbstractLrcView {
                     .get(i);
             //获取分割后的歌词列表
             List<LyricsLineInfo> lyricsLineInfos = upLyricsLineInfo.getSplitLyricsLineInfos();
-            lineTopY = drawUpExtraLyrics(canvas, extraLrcPaint, lyricsLineInfos, i, extraLrcSpaceLineHeight, lineTopY);
+            lineTopY = drawUpExtraLyrics(canvas, extraLrcPaint, lyricsLineInfos, i, 0, lineTopY);
         }
 
         //绘画时间、播放按钮等

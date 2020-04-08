@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Shader;
+import android.text.TextUtils;
 
 import com.chs.htz.lyrics.model.LyricsInfo;
 import com.chs.htz.lyrics.model.LyricsLineInfo;
@@ -822,8 +823,11 @@ public class LyricsUtils {
         for (int i = startIndex; i <= lastIndex; i++) {
             lineLyrics.append(lyricsLineInfo.getLineLyrics().charAt(i));
         }
-        newLyricsLineInfo.setStartTime(startTime);
-        newLyricsLineInfo.setLineLyrics(lineLyrics.toString());
+        String lrcTrim = LrcTextUtils.trimLricText(lineLyrics.toString().trim());
+        if (!TextUtils.isEmpty(lrcTrim)) {
+            newLyricsLineInfo.setStartTime(startTime);
+            newLyricsLineInfo.setLineLyrics(lrcTrim);
+        }
 
         return newLyricsLineInfo;
     }
