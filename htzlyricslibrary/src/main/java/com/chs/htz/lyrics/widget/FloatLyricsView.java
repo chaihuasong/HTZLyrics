@@ -13,7 +13,6 @@ import android.view.WindowManager;
 import com.chs.htz.lyrics.LyricsReader;
 import com.chs.htz.lyrics.model.LyricsInfo;
 import com.chs.htz.lyrics.model.LyricsLineInfo;
-import com.chs.htz.lyrics.utils.LrcTextUtils;
 import com.chs.htz.lyrics.utils.LyricsUtils;
 
 import java.util.List;
@@ -130,7 +129,6 @@ public class FloatLyricsView extends AbstractLrcView {
         float lineLyricsHLWidth = LyricsUtils.getLineLyricsHLWidth(lyricsReader.getLyricsType(), paint, lyricsLineInfo, splitLyricsWordIndex, lyricsWordHLTime);
         // 当行歌词
         String curLyrics = lyricsLineInfo.getLineLyrics();
-        curLyrics = LrcTextUtils.trimLricText(curLyrics);
         float curLrcTextWidth = LyricsUtils.getTextWidth(paint, curLyrics);
         // 当前歌词行的x坐标
         float textX = 0;
@@ -152,7 +150,6 @@ public class FloatLyricsView extends AbstractLrcView {
             if (splitLyricsLineNum < splitLyricsLineInfos.size()) {
                 String lrcRightText = splitLyricsLineInfos.get(
                         splitLyricsLineNum).getLineLyrics();
-                lrcRightText = LrcTextUtils.trimLricText(lrcRightText);
                 float lrcRightTextWidth = LyricsUtils.getTextWidth(paint, lrcRightText);
                 float textRightX = 0;
 
