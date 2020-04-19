@@ -78,7 +78,7 @@ public class LyricsIOUtils {
 				return lyricsFileReader;
 			}
 		}
-		return null;
+		return new LrcLyricsFileReader();
 	}
 
 	/**
@@ -104,6 +104,6 @@ public class LyricsIOUtils {
 				return lyricsFileWriter;
 			}
 		}
-		return null;
+		return new LrcLyricsFileWriter();
 	}
 }
