@@ -1124,6 +1124,17 @@ public class ManyLyricsView extends AbstractLrcView {
         super.setPaintHLColor(paintHLColor, isInvalidateView);
     }
 
+    public void setPlayPaintColor(int paintHLColor) {
+        setPlayPaintColor(paintHLColor, false);
+    }
+
+    public void setPlayPaintColor(int paintHLColor, boolean isInvalidateView) {
+        mPaintPlay.setColor(paintHLColor);
+        if (isInvalidateView) {
+            invalidateView();
+        }
+    }
+
     /**
      * 设置字体文件
      *
