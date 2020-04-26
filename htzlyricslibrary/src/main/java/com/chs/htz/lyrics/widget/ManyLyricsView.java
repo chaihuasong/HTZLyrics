@@ -164,6 +164,8 @@ public class ManyLyricsView extends AbstractLrcView {
      */
     private int mResetDuration = 3000;
 
+    private String currentText;
+
     /**
      * Handler处理滑动指示器隐藏和歌词滚动到当前播放的位置
      */
@@ -428,12 +430,13 @@ public class ManyLyricsView extends AbstractLrcView {
             if (i < curLyricsLineNum) {
                 LyricsUtils.drawText(canvas, paint, paintColors, text, textX, lineBottomY);
                 LyricsUtils.drawText(canvas, paintHL, paintHLColors, text, textX, lineBottomY);
-
+                currentText = text;
             } else if (i == curLyricsLineNum) {
                 //绘画动感歌词
                 float lineLyricsHLWidth = LyricsUtils.getLineLyricsHLWidth(lyricsReader.getLyricsType(), paint, splitLyricsLineInfos.get(i), splitLyricsWordIndex, lyricsWordHLTime);
                 LyricsUtils.drawDynamicText(canvas, paint, paintHL, paintColors, paintHLColors, text, lineLyricsHLWidth, textX, lineBottomY);
-
+                if (i == 1) currentText += text;
+                else currentText = text;
             } else if (i > curLyricsLineNum) {
                 LyricsUtils.drawText(canvas, paint, paintColors, text, textX, lineBottomY);
             }
@@ -445,6 +448,10 @@ public class ManyLyricsView extends AbstractLrcView {
         lineBottomY = fristLineTextY + lineHeight * (splitLyricsLineInfos.size());
 
         return lineBottomY;
+    }
+
+    public String getCurrentText() {
+        return currentText;
     }
 
     /**
