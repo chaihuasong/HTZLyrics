@@ -450,6 +450,10 @@ public class ManyLyricsView extends AbstractLrcView {
         return lineBottomY;
     }
 
+    /**
+     * can't get text in background, use {@link #getText} instead
+     * @return currentText
+     */
     public String getCurrentText() {
         return currentText;
     }
@@ -709,6 +713,31 @@ public class ManyLyricsView extends AbstractLrcView {
         }
 
         updateSplitData(playProgress);
+    }
+
+    /**
+     * get lyric line with play progress
+     * @param playProgress
+     * @return lyric text
+     */
+    public String getText(long playProgress) {
+        //获取数据
+        LyricsReader lyricsReader = getLyricsReader();
+        TreeMap<Integer, LyricsLineInfo> lrcLineInfos = getLrcLineInfos();
+        int newLyricsLineNum = LyricsUtils.getLineNumber(lyricsReader.getLyricsType(), lrcLineInfos, playProgress, lyricsReader.getPlayOffset());
+        int splitLyricsLineNum = getSplitLyricsLineNum();
+
+        List<LyricsLineInfo> splitLyricsLineInfos = lrcLineInfos.get(newLyricsLineNum).getSplitLyricsLineInfos();
+        LyricsLineInfo lyricsLineInfo = splitLyricsLineInfos.get(0);
+        String curLyrics = lyricsLineInfo.getLineLyrics();
+        if (splitLyricsLineNum > 0 && splitLyricsLineNum < splitLyricsLineInfos.size()) {
+            String lrcRightText = splitLyricsLineInfos.get(
+                    splitLyricsLineNum).getLineLyrics();
+            //android.util.Log.d("huasong", "--------------------->:" + curLyrics + lrcRightText);
+            return curLyrics + lrcRightText;
+        }
+        //android.util.Log.d("huasong", "curLyrics:" + curLyrics);
+        return curLyrics;
     }
 
     @Override
