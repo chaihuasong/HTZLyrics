@@ -772,12 +772,28 @@ public class LyricsUtils {
                     nextLyricsWordWidth = (int) paint.measureText(lineLyrics.charAt(i + 1) + "");
                 }
                 if (lyricsWordsWidth + nextLyricsWordWidth > maxLineWidth) {
-
-                    LyricsLineInfo newLyricsLineInfo = getNewLrcLyricsLineInfo(
-                            lyricsLineInfo, startIndex, i);
-
-                    if (newLyricsLineInfo != null) {
-                        lyricsLineInfos.add(newLyricsLineInfo);
+                    if (lineWidth - maxLineWidth < 3 * lyricsWordsWidth) {
+                        int index = i / 2 + 1;
+                        if (lyricsLineInfo.toString().contains("，")) {
+                            index = lyricsLineInfo.toString().indexOf("，") + 1;
+                        }
+                        LyricsLineInfo newLyricsLineInfo = getNewLrcLyricsLineInfo(
+                                lyricsLineInfo, startIndex, index);
+                        if (newLyricsLineInfo != null) {
+                            lyricsLineInfos.add(newLyricsLineInfo);
+                        }
+                        LyricsLineInfo secondLyricsLineInfo = getNewLrcLyricsLineInfo(
+                                lyricsLineInfo, index + 1, lineLyrics.length() - 1);
+                        if (secondLyricsLineInfo != null) {
+                            lyricsLineInfos.add(secondLyricsLineInfo);
+                        }
+                        break;
+                    } else {
+                        LyricsLineInfo newLyricsLineInfo = getNewLrcLyricsLineInfo(
+                                lyricsLineInfo, startIndex, i);
+                        if (newLyricsLineInfo != null) {
+                            lyricsLineInfos.add(newLyricsLineInfo);
+                        }
                     }
 
                     //
