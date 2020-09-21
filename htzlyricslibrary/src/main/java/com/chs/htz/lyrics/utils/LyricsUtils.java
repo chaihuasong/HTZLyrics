@@ -984,6 +984,7 @@ public class LyricsUtils {
      * @return
      */
     public static int getSplitLrcLyricsLineNum(TreeMap<Integer, LyricsLineInfo> mLrcLineInfos, int mLyricsLineNum, long playProgress, long playOffset) {
+        if (mLrcLineInfos == null) return 0;
         LyricsLineInfo lyrLine = mLrcLineInfos.get(mLyricsLineNum);
         List<LyricsLineInfo> lyricsLineInfos = lyrLine.getSplitLyricsLineInfos();
         return getSplitLrcLyricsLineNum(lyricsLineInfos, playProgress, playOffset);
