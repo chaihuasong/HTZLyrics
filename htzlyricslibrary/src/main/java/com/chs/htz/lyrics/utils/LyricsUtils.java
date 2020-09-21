@@ -467,7 +467,7 @@ public class LyricsUtils {
      * @return
      */
     public static int getLineNumber(int lyricsType, TreeMap<Integer, LyricsLineInfo> lyricsLineTreeMap, long curPlayingTime, long playOffset) {
-
+        if (lyricsLineTreeMap == null) return 0;
         //添加歌词增量
         long newPlayingTime = curPlayingTime + playOffset;
         if (lyricsType == LyricsInfo.LRC) {
