@@ -95,7 +95,7 @@ public class ManyLyricsView extends AbstractLrcView {
     /**
      * 播放按钮区域字体大小
      */
-    private int mPlayRectSize = 25;
+    private int mPlayRectSize = 32;
     /**
      * 判断view是点击还是移动的距离
      */
