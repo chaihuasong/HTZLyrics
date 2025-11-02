@@ -2,12 +2,12 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/HTZLyrics.iml" filepath="$PROJECT_DIR$/HTZLyrics.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/HTZLyrics-app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/HTZLyrics-app.iml" group="HTZLyrics/app" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/htzlyricslibrary/HTZLyrics-htzlyricslibrary.iml" filepath="$PROJECT_DIR$/.idea/modules/htzlyricslibrary/HTZLyrics-htzlyricslibrary.iml" group="HTZLyrics/htzlyricslibrary" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/htzlyricslibrary/htzlyricslibrary.iml" filepath="$PROJECT_DIR$/htzlyricslibrary/htzlyricslibrary.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/libraries-HTZLyrics.iml" filepath="$PROJECT_DIR$/.idea/modules/libraries-HTZLyrics.iml" group="HTZLyrics" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/HTZLyrics.iml" filepath="$PROJECT_DIR$/.idea/modules/HTZLyrics.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/HTZLyrics.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/HTZLyrics.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/htzlyricslibrary/HTZLyrics.htzlyricslibrary.iml" filepath="$PROJECT_DIR$/.idea/modules/htzlyricslibrary/HTZLyrics.htzlyricslibrary.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/htzlyricslibrary/HTZLyrics.htzlyricslibrary.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/htzlyricslibrary/HTZLyrics.htzlyricslibrary.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/htzlyricslibrary/HTZLyrics.htzlyricslibrary.main.iml" filepath="$PROJECT_DIR$/.idea/modules/htzlyricslibrary/HTZLyrics.htzlyricslibrary.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/htzlyricslibrary/HTZLyrics.htzlyricslibrary.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/htzlyricslibrary/HTZLyrics.htzlyricslibrary.unitTest.iml" />
     </modules>
   </component>
 </project>
