@@ -741,7 +741,7 @@ public class ManyLyricsView extends AbstractLrcView {
             if (mTouchEventStatus == TOUCHEVENTSTATUS_INIT) {
                 if (!mIsTopMode) {
                     // ★ 非顶部模式：保持你原来的滚动行为
-                    int duration = mDuration * getLineSizeNum(newLyricsLineNum);
+                    int duration = (int) (mDuration / mSpeed * getLineSizeNum(newLyricsLineNum));
                     int deltaY = getLineAtHeightY(newLyricsLineNum) - mScroller.getFinalY();
                     mScroller.startScroll(0, mScroller.getFinalY(), 0, deltaY, duration);
                     invalidateView();

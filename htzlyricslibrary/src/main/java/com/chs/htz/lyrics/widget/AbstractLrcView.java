@@ -11,6 +11,7 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
+import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -96,6 +97,8 @@ public abstract class AbstractLrcView extends View {
      * seekto
      */
     public static final int LRCPLAYERSTATUS_SEEKTO = 2;
+
+    protected float mSpeed = 1.0f;
 
 
     /**
@@ -482,7 +485,7 @@ public abstract class AbstractLrcView extends View {
                 if (context != null) {
                     synchronized (lock) {
                         if (mLyricsReader != null) {
-                            updateView(mCurPlayingTime + mPlayerSpendTime);
+                            updateView(getUpdateTime());
                             if (mLrcPlayerStatus == LRCPLAYERSTATUS_PLAY) {
                                 mUIHandler.sendEmptyMessage(0);
                             } else if (mLrcPlayerStatus == LRCPLAYERSTATUS_SEEKTO) {
@@ -499,6 +502,14 @@ public abstract class AbstractLrcView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         onDrawView(canvas);
+    }
+
+    public void setSpeed(float speed) {
+        mSpeed = speed;
+    }
+
+    public float getSpeed() {
+        return mSpeed;
     }
 
     /**
@@ -870,13 +881,24 @@ public abstract class AbstractLrcView extends View {
             synchronized (lock) {
                 removeCallbacksAndMessages();
                 //更新行和索引等数据
-                updateView(mCurPlayingTime + mPlayerSpendTime);
+                updateView(getUpdateTime());
                 invalidateView();
                 if (mLrcPlayerStatus == LRCPLAYERSTATUS_PLAY) {
                     mWorkerHandler.sendEmptyMessageDelayed(0, mRefreshTime);
                 }
             }
         }
+    }
+
+    private long getUpdateTime() {
+        return mCurPlayingTime + mPlayerSpendTime;
+    }
+
+    public void updateProgress(long progress) {
+        this.mCurPlayingTime = progress;
+        mPlayerStartTime = System.currentTimeMillis();
+        mPlayerSpendTime = 0;
+        mCurPlayingTime = progress;
     }
 
     /**
@@ -1096,7 +1118,7 @@ public abstract class AbstractLrcView extends View {
                 setExtraLrcFontSize(extraFontSize, false);
                 if (isReloadData) {
                     if (hasLrcLineInfos()) {
-                        updateView(mCurPlayingTime + mPlayerSpendTime);
+                        updateView(getUpdateTime());
                     }
                     invalidateView();
                 }
@@ -1134,7 +1156,7 @@ public abstract class AbstractLrcView extends View {
             if (isReloadData) {
                 //加载歌词数据
                 if (hasLrcLineInfos()) {
-                    updateView(mCurPlayingTime + mPlayerSpendTime);
+                    updateView(getUpdateTime());
                 }
                 invalidateView();
             }
@@ -1159,7 +1181,7 @@ public abstract class AbstractLrcView extends View {
 
             if (isReloadData) {
                 if (hasLrcLineInfos()) {
-                    updateView(mCurPlayingTime + mPlayerSpendTime);
+                    updateView(getUpdateTime());
                 }
                 invalidateView();
             }
