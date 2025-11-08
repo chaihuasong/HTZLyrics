@@ -353,7 +353,7 @@ public abstract class AbstractLrcView extends View {
     /**
      * 当前播放进度
      */
-    private long mCurPlayingTime = 0;
+    protected long mCurPlayingTime = 0;
     /**
      * 刷新延时时间
      */
@@ -618,6 +618,10 @@ public abstract class AbstractLrcView extends View {
      * @param playProgress
      */
     protected abstract void updateView(long playProgress);
+
+    public void update(long playProgess) {
+        update(playProgess);
+    }
 
     /**
      * 获取额外歌词类型

@@ -13,6 +13,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Display;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
@@ -691,6 +692,10 @@ public class ManyLyricsView extends AbstractLrcView {
         LinearGradient linearGradientHL = new LinearGradient(lineLeft, lineY + lineH, lineR, lineY + lineH, new int[]{ColorUtils.parserColor(mPaintLineColor, 255), ColorUtils.parserColor(mPaintLineColor, 0), ColorUtils.parserColor(mPaintLineColor, 0), ColorUtils.parserColor(mPaintLineColor, 255)}, new float[]{0f, 0.2f, 0.8f, 1f}, Shader.TileMode.CLAMP);
         mPaintLine.setShader(linearGradientHL);
         canvas.drawRect(lineLeft, lineY, lineR, lineY + lineH, mPaintLine);
+    }
+
+    public void updateTopMode(boolean isTopMode) {
+        mIsTopMode = isTopMode;
     }
 
     /**
