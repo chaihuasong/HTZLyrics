@@ -239,7 +239,6 @@ public class FloatLyricsView extends AbstractLrcView {
      * @param playProgress
      */
     private void updateFloatLrcView(long playProgress) {
-
         LyricsReader lyricsReader = getLyricsReader();
         TreeMap<Integer, LyricsLineInfo> lrcLineInfos = getLrcLineInfos();
         int lyricsLineNum = LyricsUtils.getLineNumber(lyricsReader.getLyricsType(), lrcLineInfos, playProgress, lyricsReader.getPlayOffset());

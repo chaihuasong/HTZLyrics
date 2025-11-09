@@ -891,14 +891,13 @@ public abstract class AbstractLrcView extends View {
     }
 
     private long getUpdateTime() {
-        return mCurPlayingTime + mPlayerSpendTime;
+        return mCurPlayingTime;
     }
 
     public void updateProgress(long progress) {
         this.mCurPlayingTime = progress;
         mPlayerStartTime = System.currentTimeMillis();
         mPlayerSpendTime = 0;
-        mCurPlayingTime = progress;
     }
 
     /**
