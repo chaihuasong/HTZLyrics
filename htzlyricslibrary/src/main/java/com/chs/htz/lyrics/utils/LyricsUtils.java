@@ -25,6 +25,77 @@ import java.util.TreeMap;
 public class LyricsUtils {
 
     /**
+     * 缓存的 LinearGradient 对象，避免每帧重复创建
+     */
+    private static LinearGradient sCachedGradient;
+    private static LinearGradient sCachedHLGradient;
+    private static int[] sCachedGradientColors;
+    private static int[] sCachedHLGradientColors;
+    private static float sCachedGradientHeight;
+
+    /**
+     * 获取或创建渐变对象（普通画笔）
+     */
+    private static LinearGradient getGradient(float x, float y, float textHeight, int[] colors) {
+        if (sCachedGradient == null ||
+                sCachedGradientColors != colors ||
+                Math.abs(sCachedGradientHeight - textHeight) > 1f) {
+            sCachedGradient = new LinearGradient(0, -textHeight, 0, 0, colors, null, Shader.TileMode.CLAMP);
+            sCachedGradientColors = colors;
+            sCachedGradientHeight = textHeight;
+        }
+        return sCachedGradient;
+    }
+
+    /**
+     * 获取或创建渐变对象（高亮画笔）
+     */
+    private static LinearGradient getHLGradient(float x, float y, float textHeight, int[] colors) {
+        if (sCachedHLGradient == null ||
+                sCachedHLGradientColors != colors ||
+                Math.abs(sCachedGradientHeight - textHeight) > 1f) {
+            sCachedHLGradient = new LinearGradient(0, -textHeight, 0, 0, colors, null, Shader.TileMode.CLAMP);
+            sCachedHLGradientColors = colors;
+        }
+        return sCachedHLGradient;
+    }
+
+    /**
+     * 清除渐变缓存（字体大小或颜色改变时调用）
+     */
+    public static void clearGradientCache() {
+        sCachedGradient = null;
+        sCachedHLGradient = null;
+        sCachedGradientColors = null;
+        sCachedHLGradientColors = null;
+    }
+
+    /**
+     * 文本高度缓存，避免每次调用都获取 FontMetrics
+     */
+    private static float sCachedTextHeight = -1;
+    private static float sCachedRealTextHeight = -1;
+    private static float sCachedTextSize = -1;
+
+    /**
+     * 清除文本高度缓存（字体大小改变时调用）
+     */
+    public static void clearTextHeightCache() {
+        sCachedTextHeight = -1;
+        sCachedRealTextHeight = -1;
+        sCachedTextSize = -1;
+    }
+
+    /**
+     * 清除所有缓存（切换歌曲或字体改变时调用）
+     */
+    public static void clearAllCache() {
+        clearGradientCache();
+        clearTextHeightCache();
+        resetLineNumberCache();
+    }
+
+    /**
      * 绘画单行动感歌词行
      *
      * @param canvas
@@ -106,7 +177,7 @@ public class LyricsUtils {
 
 
     /**
-     * 获取行歌词高亮的宽度
+     * 获取行歌词高亮的宽度（优化版：使用累计宽度缓存）
      *
      * @param paint
      * @param lyricsLineInfo
@@ -125,26 +196,34 @@ public class LyricsUtils {
             lineLyricsHLWidth = curLrcTextWidth;
         } else {
             if (lyricsWordIndex != -1) {
-                String lyricsWords[] = lyricsLineInfo.getLyricsWords();
-                int wordsDisInterval[] = lyricsLineInfo
-                        .getWordsDisInterval();
-                // 当前歌词之前的歌词
-                StringBuilder lyricsBeforeWord = new StringBuilder();
-                for (int i = 0; i < lyricsWordIndex; i++) {
-                    lyricsBeforeWord.append(lyricsWords[i]);
+                String[] lyricsWords = lyricsLineInfo.getLyricsWords();
+                int[] wordsDisInterval = lyricsLineInfo.getWordsDisInterval();
+
+                if (lyricsWords == null || wordsDisInterval == null ||
+                        lyricsWordIndex >= lyricsWords.length) {
+                    return 0;
                 }
-                // 当前歌词字
-                String lrcNowWord = lyricsWords[lyricsWordIndex].trim();// 去掉空格
-                // 当前歌词之前的歌词长度
-                float lyricsBeforeWordWidth = paint
-                        .measureText(lyricsBeforeWord.toString());
+
+                // 获取或计算累计宽度
+                float[] cumulativeWidths = lyricsLineInfo.getCumulativeWidths();
+                if (cumulativeWidths == null) {
+                    // 首次计算并缓存累计宽度
+                    cumulativeWidths = new float[lyricsWords.length + 1];
+                    cumulativeWidths[0] = 0;
+                    for (int i = 0; i < lyricsWords.length; i++) {
+                        cumulativeWidths[i + 1] = cumulativeWidths[i] + paint.measureText(lyricsWords[i]);
+                    }
+                    lyricsLineInfo.setCumulativeWidths(cumulativeWidths);
+                }
+
+                // 使用缓存的累计宽度
+                float lyricsBeforeWordWidth = cumulativeWidths[lyricsWordIndex];
 
                 // 当前歌词长度
+                String lrcNowWord = lyricsWords[lyricsWordIndex].trim();
                 float lyricsNowWordWidth = paint.measureText(lrcNowWord);
 
-                float len = lyricsNowWordWidth
-                        / wordsDisInterval[lyricsWordIndex]
-                        * lyricsWordHLTime;
+                float len = lyricsNowWordWidth / wordsDisInterval[lyricsWordIndex] * lyricsWordHLTime;
                 lineLyricsHLWidth = lyricsBeforeWordWidth + len;
             }
         }
@@ -154,7 +233,7 @@ public class LyricsUtils {
 
 
     /**
-     * 绘画动感文本
+     * 绘画动感文本（优化版：使用缓存的渐变对象）
      *
      * @param canvas
      * @param paint   默认画笔
@@ -165,20 +244,26 @@ public class LyricsUtils {
      * @param y
      */
     public static void drawDynamicText(Canvas canvas, Paint paint, Paint paintHL, int[] paintColor, int[] paintHLColor, String text, float hlWidth, float x, float y) {
+        float textHeight = getTextHeight(paint);
+
         canvas.save();
+        // 平移到绘制位置，使用相对坐标的缓存渐变
+        canvas.translate(x, y);
 
-        //设置为上下渐变
-        LinearGradient linearGradient = new LinearGradient(x, y - getTextHeight(paint), x, y, paintColor, null, Shader.TileMode.CLAMP);
-        paint.setShader(linearGradient);
-        canvas.drawText(text, x, y, paint);
-        //设置动感歌词过渡效果
-        canvas.clipRect(x, y - getRealTextHeight(paint), x + hlWidth,
-                y + getRealTextHeight(paint));
+        // 使用缓存的渐变对象
+        LinearGradient gradient = getGradient(0, 0, textHeight, paintColor);
+        paint.setShader(gradient);
+        canvas.drawText(text, 0, 0, paint);
 
-        //设置为上下渐变
-        LinearGradient linearGradientHL = new LinearGradient(x, y - getTextHeight(paint), x, y, paintHLColor, null, Shader.TileMode.CLAMP);
-        paintHL.setShader(linearGradientHL);
-        canvas.drawText(text, x, y, paintHL);
+        // 设置动感歌词过渡效果
+        float realHeight = getRealTextHeight(paint);
+        canvas.clipRect(0, -realHeight, hlWidth, realHeight);
+
+        // 使用缓存的高亮渐变
+        LinearGradient hlGradient = getHLGradient(0, 0, textHeight, paintHLColor);
+        paintHL.setShader(hlGradient);
+        canvas.drawText(text, 0, 0, paintHL);
+
         canvas.restore();
     }
 
@@ -220,7 +305,7 @@ public class LyricsUtils {
 
 
     /**
-     * 绘画文本
+     * 绘画文本（优化版：使用缓存的渐变对象）
      *
      * @param canvas
      * @param paint
@@ -230,32 +315,53 @@ public class LyricsUtils {
      * @param y
      */
     public static void drawText(Canvas canvas, Paint paint, int[] paintColor, String text, float x, float y) {
-        //设置为上下渐变
-        LinearGradient linearGradient = new LinearGradient(x, y - getTextHeight(paint), x, y, paintColor, null, Shader.TileMode.CLAMP);
-        paint.setShader(linearGradient);
-        canvas.drawText(text, x, y, paint);
+        float textHeight = getTextHeight(paint);
+
+        canvas.save();
+        canvas.translate(x, y);
+
+        // 使用缓存的渐变对象
+        LinearGradient gradient = getGradient(0, 0, textHeight, paintColor);
+        paint.setShader(gradient);
+        canvas.drawText(text, 0, 0, paint);
+
+        canvas.restore();
     }
 
     /**
-     * 获取真实的歌词高度
+     * 获取真实的歌词高度（带缓存优化）
      *
      * @param paint
      * @return
      */
     public static int getRealTextHeight(Paint paint) {
+        float textSize = paint.getTextSize();
+        if (sCachedRealTextHeight > 0 && Math.abs(sCachedTextSize - textSize) < 0.1f) {
+            return (int) sCachedRealTextHeight;
+        }
+
         Paint.FontMetrics fm = paint.getFontMetrics();
-        return (int) (-fm.leading - fm.ascent + fm.descent);
+        sCachedRealTextHeight = -fm.leading - fm.ascent + fm.descent;
+        sCachedTextSize = textSize;
+        return (int) sCachedRealTextHeight;
     }
 
     /**
-     * 获取行歌词高度。用于y轴位置计算
+     * 获取行歌词高度。用于y轴位置计算（带缓存优化）
      *
      * @param paint
      * @return
      */
     public static int getTextHeight(Paint paint) {
+        float textSize = paint.getTextSize();
+        if (sCachedTextHeight > 0 && Math.abs(sCachedTextSize - textSize) < 0.1f) {
+            return (int) sCachedTextHeight;
+        }
+
         Paint.FontMetrics fm = paint.getFontMetrics();
-        return (int) -(fm.ascent + fm.descent);
+        sCachedTextHeight = -(fm.ascent + fm.descent);
+        sCachedTextSize = textSize;
+        return (int) sCachedTextHeight;
     }
 
     /**
@@ -282,7 +388,7 @@ public class LyricsUtils {
     public static File getLrcFile(String fileName, String filePathDirectory) {
         List<String> lrcExts = LyricsIOUtils.getSupportLyricsExts();
         for (int i = 0; i < lrcExts.size(); i++) {
-            String lrcFilePath = filePathDirectory + File.separator + fileName + "." + lrcExts.get(i);
+            String lrcFilePath = filePathDirectory + File.separator + fileName/* + "." + lrcExts.get(i)*/;
             File lrcFile = new File(lrcFilePath);
             if (lrcFile.exists()) {
                 return lrcFile;
@@ -458,7 +564,20 @@ public class LyricsUtils {
     }
 
     /**
+     * 缓存上次查询的行号，用于优化查询性能
+     */
+    private static int sLastLineNumber = 0;
+
+    /**
+     * 重置行号缓存（切换歌曲时调用）
+     */
+    public static void resetLineNumberCache() {
+        sLastLineNumber = 0;
+    }
+
+    /**
      * 通过播放的进度，获取所唱歌词行数
+     * 优化：从上次行号附近开始查询，大多数情况下只需要O(1)时间
      *
      * @param lyricsType        歌词类型 LyricsInfo.LRC OR LyricsInfo.DYNAMIC
      * @param lyricsLineTreeMap 歌词集合
@@ -467,43 +586,142 @@ public class LyricsUtils {
      * @return
      */
     public static int getLineNumber(int lyricsType, TreeMap<Integer, LyricsLineInfo> lyricsLineTreeMap, long curPlayingTime, long playOffset) {
-        if (lyricsLineTreeMap == null) return 0;
+        if (lyricsLineTreeMap == null || lyricsLineTreeMap.isEmpty()) return 0;
+
+        int size = lyricsLineTreeMap.size();
         //添加歌词增量
         long newPlayingTime = curPlayingTime + playOffset;
+
+        // 确保缓存行号在有效范围内
+        if (sLastLineNumber < 0 || sLastLineNumber >= size) {
+            sLastLineNumber = 0;
+        }
+
         if (lyricsType == LyricsInfo.LRC) {
-            //lrc歌词
-            for (int i = 0; i < lyricsLineTreeMap.size(); i++) {
-
-                if (newPlayingTime < lyricsLineTreeMap.get(i).getStartTime()) return 0;
-
-                if (newPlayingTime >= lyricsLineTreeMap.get(i).getStartTime()
-                        && i + 1 < lyricsLineTreeMap.size()
-                        && newPlayingTime <= lyricsLineTreeMap.get(i + 1).getStartTime()) {
-                    return i;
-                }
-            }
-            if (lyricsLineTreeMap.size() > 0) {
-                return lyricsLineTreeMap.size() - 1;
-            }
+            // LRC歌词：优化查询，从上次行号开始
+            return getLineNumberLrc(lyricsLineTreeMap, newPlayingTime, size);
         } else if (lyricsType == LyricsInfo.DYNAMIC) {
-            //动感歌词
-            for (int i = 0; i < lyricsLineTreeMap.size(); i++) {
-                if (newPlayingTime >= lyricsLineTreeMap.get(i).getStartTime()
-                        && newPlayingTime <= lyricsLineTreeMap.get(i).getEndTime()) {
-                    return i;
-                }
-                if (newPlayingTime > lyricsLineTreeMap.get(i).getEndTime()
-                        && i + 1 < lyricsLineTreeMap.size()
-                        && newPlayingTime <= lyricsLineTreeMap.get(i + 1).getStartTime()) {
-                    return i;
-                }
-            }
-            if (newPlayingTime >= lyricsLineTreeMap.get(lyricsLineTreeMap.size() - 1)
-                    .getEndTime()) {
-                return lyricsLineTreeMap.size() - 1;
-            }
+            // 动感歌词：优化查询，从上次行号开始
+            return getLineNumberDynamic(lyricsLineTreeMap, newPlayingTime, size);
         }
         return 0;
+    }
+
+    /**
+     * LRC歌词行号查询优化
+     */
+    private static int getLineNumberLrc(TreeMap<Integer, LyricsLineInfo> lyricsLineTreeMap, long newPlayingTime, int size) {
+        // 快速检查：当前时间是否在上次行号范围内
+        LyricsLineInfo lastLine = lyricsLineTreeMap.get(sLastLineNumber);
+        if (lastLine != null) {
+            long startTime = lastLine.getStartTime();
+            long nextStartTime = (sLastLineNumber + 1 < size) ?
+                    lyricsLineTreeMap.get(sLastLineNumber + 1).getStartTime() : Long.MAX_VALUE;
+
+            if (newPlayingTime >= startTime && newPlayingTime < nextStartTime) {
+                return sLastLineNumber;
+            }
+
+            // 检查是否是下一行
+            if (sLastLineNumber + 1 < size && newPlayingTime >= nextStartTime) {
+                long nextNextStartTime = (sLastLineNumber + 2 < size) ?
+                        lyricsLineTreeMap.get(sLastLineNumber + 2).getStartTime() : Long.MAX_VALUE;
+                if (newPlayingTime < nextNextStartTime) {
+                    sLastLineNumber = sLastLineNumber + 1;
+                    return sLastLineNumber;
+                }
+            }
+        }
+
+        // 时间在第一行之前
+        if (newPlayingTime < lyricsLineTreeMap.get(0).getStartTime()) {
+            sLastLineNumber = 0;
+            return 0;
+        }
+
+        // 二分查找
+        int low = 0;
+        int high = size - 1;
+        int result = 0;
+
+        while (low <= high) {
+            int mid = (low + high) >>> 1;
+            long midStartTime = lyricsLineTreeMap.get(mid).getStartTime();
+
+            if (midStartTime <= newPlayingTime) {
+                result = mid;
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+
+        sLastLineNumber = result;
+        return result;
+    }
+
+    /**
+     * 动感歌词行号查询优化
+     */
+    private static int getLineNumberDynamic(TreeMap<Integer, LyricsLineInfo> lyricsLineTreeMap, long newPlayingTime, int size) {
+        // 快速检查：当前时间是否在上次行号范围内
+        LyricsLineInfo lastLine = lyricsLineTreeMap.get(sLastLineNumber);
+        if (lastLine != null) {
+            long startTime = lastLine.getStartTime();
+            long endTime = lastLine.getEndTime();
+
+            // 在当前行的时间范围内
+            if (newPlayingTime >= startTime && newPlayingTime <= endTime) {
+                return sLastLineNumber;
+            }
+
+            // 在当前行结束和下一行开始之间（间隙）
+            if (sLastLineNumber + 1 < size) {
+                long nextStartTime = lyricsLineTreeMap.get(sLastLineNumber + 1).getStartTime();
+                if (newPlayingTime > endTime && newPlayingTime <= nextStartTime) {
+                    return sLastLineNumber;
+                }
+
+                // 检查下一行
+                LyricsLineInfo nextLine = lyricsLineTreeMap.get(sLastLineNumber + 1);
+                if (newPlayingTime >= nextLine.getStartTime() && newPlayingTime <= nextLine.getEndTime()) {
+                    sLastLineNumber = sLastLineNumber + 1;
+                    return sLastLineNumber;
+                }
+            }
+        }
+
+        // 已经过了最后一行
+        LyricsLineInfo lastLineInfo = lyricsLineTreeMap.get(size - 1);
+        if (newPlayingTime >= lastLineInfo.getEndTime()) {
+            sLastLineNumber = size - 1;
+            return size - 1;
+        }
+
+        // 二分查找
+        int low = 0;
+        int high = size - 1;
+        int result = 0;
+
+        while (low <= high) {
+            int mid = (low + high) >>> 1;
+            LyricsLineInfo midLine = lyricsLineTreeMap.get(mid);
+
+            if (newPlayingTime >= midLine.getStartTime()) {
+                result = mid;
+                if (newPlayingTime <= midLine.getEndTime()) {
+                    // 找到精确匹配
+                    sLastLineNumber = mid;
+                    return mid;
+                }
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+
+        sLastLineNumber = result;
+        return result;
     }
 
 

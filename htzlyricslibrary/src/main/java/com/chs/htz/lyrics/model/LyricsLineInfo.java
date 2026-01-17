@@ -40,6 +40,12 @@ public class LyricsLineInfo {
      */
     private List<LyricsLineInfo> mSplitDynamicLrcLineInfos;
 
+    /**
+     * 每个字的累计宽度缓存（性能优化用）
+     * cumulativeWidths[i] = 前i个字的总宽度
+     */
+    private float[] mCumulativeWidths;
+
     public List<LyricsLineInfo> getSplitLyricsLineInfos() {
         return mSplitDynamicLrcLineInfos;
     }
@@ -103,6 +109,27 @@ public class LyricsLineInfo {
     }
 
     /**
+     * 获取累计宽度数组
+     */
+    public float[] getCumulativeWidths() {
+        return mCumulativeWidths;
+    }
+
+    /**
+     * 设置累计宽度数组
+     */
+    public void setCumulativeWidths(float[] cumulativeWidths) {
+        this.mCumulativeWidths = cumulativeWidths;
+    }
+
+    /**
+     * 清除累计宽度缓存
+     */
+    public void clearCumulativeWidths() {
+        this.mCumulativeWidths = null;
+    }
+
+    /**
      * 复制
      *
      * @param dist 要复制的实体类
@@ -121,5 +148,7 @@ public class LyricsLineInfo {
 
         dist.setLineLyrics(orig.getLineLyrics());
 
+        // 累计宽度不复制，需要重新计算
+        dist.clearCumulativeWidths();
     }
 }

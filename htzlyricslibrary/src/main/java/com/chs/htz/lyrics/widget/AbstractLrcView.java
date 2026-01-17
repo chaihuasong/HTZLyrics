@@ -371,24 +371,7 @@ public abstract class AbstractLrcView extends View {
     /**
      * 处理ui任务
      */
-    private Handler mUIHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            Context context = mActivityWR.get();
-            if (context != null) {
-                synchronized (lock) {
-                    if (mLrcPlayerStatus == LRCPLAYERSTATUS_PLAY && mLyricsReader != null) {
-                        invalidateView();
-                        long endTime = System.currentTimeMillis();
-                        long updateTime = (endTime - mPlayerStartTime) - mPlayerSpendTime;
-                        mPlayerSpendTime = (endTime - mPlayerStartTime);
-                        long delayMs = mRefreshTime - updateTime;
-                        mWorkerHandler.sendEmptyMessageDelayed(0, Math.max(0, delayMs));
-                    }
-                }
-            }
-        }
-    };
+    private Handler mUIHandler;
 
     private WeakReference<Context> mActivityWR;
 
@@ -473,6 +456,27 @@ public abstract class AbstractLrcView extends View {
 
         //
         mActivityWR = new WeakReference<Context>(context);
+
+        // 初始化UI Handler，显式指定主线程Looper以兼容Android 11+
+        mUIHandler = new Handler(Looper.getMainLooper()) {
+            @Override
+            public void handleMessage(Message msg) {
+                Context ctx = mActivityWR.get();
+                if (ctx != null) {
+                    synchronized (lock) {
+                        if (mLrcPlayerStatus == LRCPLAYERSTATUS_PLAY && mLyricsReader != null) {
+                            invalidateView();
+                            long endTime = System.currentTimeMillis();
+                            long updateTime = (endTime - mPlayerStartTime) - mPlayerSpendTime;
+                            mPlayerSpendTime = (endTime - mPlayerStartTime);
+                            long delayMs = mRefreshTime - updateTime;
+                            mWorkerHandler.sendEmptyMessageDelayed(0, Math.max(0, delayMs));
+                        }
+                    }
+                }
+            }
+        };
+
         //创建异步HandlerThread
         mHandlerThread = new HandlerThread("updateLrcData", Process.THREAD_PRIORITY_BACKGROUND);
         //必须先开启线程
@@ -501,6 +505,8 @@ public abstract class AbstractLrcView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        // 确保Scroller动画在每次绘制时被驱动，兼容Android 11+
+        computeScroll();
         onDrawView(canvas);
     }
 
@@ -606,8 +612,14 @@ public abstract class AbstractLrcView extends View {
      * @date: 2018-04-21 9:24
      */
     public synchronized void invalidateView() {
+        // 确保视图已附加到窗口
+        if (!isAttachedToWindow()) {
+            return;
+        }
         if (Looper.getMainLooper() == Looper.myLooper()) {
-            //  当前线程是主UI线程，直接刷新。
+            //  当前线程是主UI线程
+            //  Android 12+ 上 postInvalidateOnAnimation 在嵌套View中可能不可靠
+            //  直接使用 invalidate() 确保立即重绘
             invalidate();
         } else {
             //  当前线程是非UI线程，post刷新。
@@ -1075,6 +1087,9 @@ public abstract class AbstractLrcView extends View {
         mLrcPlayerStatus = LRCPLAYERSTATUS_INIT;
         removeCallbacksAndMessages();
 
+        // 重置所有缓存（行号、渐变、文本高度）
+        LyricsUtils.clearAllCache();
+
         //player
         mCurPlayingTime = 0;
         mPlayerStartTime = 0;
@@ -1144,6 +1159,10 @@ public abstract class AbstractLrcView extends View {
             mPaintHL.setTextSize(mFontSize);
             mPaintOutline.setTextSize(mFontSize);
             mExtraLrcPaint.setTextSize(mFontSize);
+
+            // 字体大小改变，清除高度和渐变缓存
+            LyricsUtils.clearTextHeightCache();
+            LyricsUtils.clearGradientCache();
 
             //搜索歌词回调不为空
             if (mSearchLyricsListener != null) {

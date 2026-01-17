@@ -168,6 +168,13 @@ public class ManyLyricsView extends AbstractLrcView {
     private String currentText;
 
     /**
+     * 行高度累计缓存，避免每帧重复计算
+     * mLineHeightCache[i] = 第i行的起始Y坐标
+     */
+    private int[] mLineHeightCache;
+    private boolean mLineHeightCacheValid = false;
+
+    /**
      * Handler处理滑动指示器隐藏和歌词滚动到当前播放的位置
      */
     private Handler mHandler = new Handler() {
@@ -695,7 +702,26 @@ public class ManyLyricsView extends AbstractLrcView {
     }
 
     public void updateTopMode(boolean isTopMode) {
+        if (mIsTopMode != isTopMode) {
+            Log.d("ManyLyricsView", "updateTopMode: " + mIsTopMode + " -> " + isTopMode
+                    + ", attached=" + isAttachedToWindow() + ", hasLrc=" + (getLrcLineInfos() != null)
+                    + ", lyricsLineNum=" + getLyricsLineNum());
+        }
         mIsTopMode = isTopMode;
+    }
+
+    /**
+     * 重写play方法，确保播放时自动启用滚动动画
+     * @param playProgress 播放进度
+     */
+    @Override
+    public void play(int playProgress) {
+        Log.d("ManyLyricsView", "play called: progress=" + playProgress
+                + ", mIsTopMode=" + mIsTopMode + ", attached=" + isAttachedToWindow()
+                + ", visibility=" + getVisibility() + ", width=" + getWidth() + ", height=" + getHeight());
+        // ★ 关键：播放时自动禁用顶部模式，确保滚动动画正常工作
+        mIsTopMode = false;
+        super.play(playProgress);
     }
 
     /**
@@ -710,45 +736,43 @@ public class ManyLyricsView extends AbstractLrcView {
         TreeMap<Integer, LyricsLineInfo> lrcLineInfos = getLrcLineInfos();
         int lyricsLineNum = getLyricsLineNum();
 
-        // ---------- 顶部模式：把整块歌词锚定从顶部开始绘制 ----------
-        // 利用原公式：centre = centerY + getLineAtHeightY(cur) - mOffsetY
-        // 我们期望“从顶部绘制”，即：当前行屏幕Y = topBaseline + (getLineAtHeightY(cur) - getLineAtHeightY(0))
-        // 反推可得：mOffsetY_top = centerY + getLineAtHeightY(0) - topBaseline（常量，与 cur 无关）
-        if (mIsTopMode && getHeight() > 0 && lrcLineInfos != null && lrcLineInfos.size() > 0) {
-            Paint paintHL = getPaintHL();
-            float hlTextHeight = LyricsUtils.getTextHeight(paintHL);
-            float topBaseline = getPaddingTop() + hlTextHeight;
-            float centerY = (getHeight() + hlTextHeight) * 0.5f;
-            float firstLineHeightY = getLineAtHeightY(0);
-            float anchorOffset = centerY + firstLineHeightY - topBaseline; // ★ 顶部锚定偏移（常量）
-            // 直接锚定 mOffsetY，并同步 scroller，避免 computeScroll 覆盖
-            mOffsetY = anchorOffset;
-            mScroller.setFinalY((int) mOffsetY);
-
-            // 当前行在屏幕上的 Y（顶部模式下的“应有位置”）
-            float curYFromTop = topBaseline + (getLineAtHeightY(lyricsLineNum) - firstLineHeightY);
-            // 到达中心线则退出顶部模式（此刻 mOffsetY == getLineAtHeightY(cur)，无缝衔接原逻辑）
-            if (curYFromTop >= centerY - 1f) {
-                mIsTopMode = false;
-            }
-        }
-        // -----------------------------------------------------------
+        // ---------- 顶部模式处理已移至 onDrawLrcView，这里只做滚动控制 ----------
 
         int newLyricsLineNum = LyricsUtils.getLineNumber(lyricsReader.getLyricsType(), lrcLineInfos, playProgress, lyricsReader.getPlayOffset());
         // 防止newLyricsLineNum为-1
         newLyricsLineNum = Math.max(0, newLyricsLineNum);
+
+        // ★ 关键：只要行号变化或者是初始状态（-1），就触发滚动
         if (newLyricsLineNum != lyricsLineNum) {
-            if (mTouchEventStatus == TOUCHEVENTSTATUS_INIT) {
-                if (!mIsTopMode) {
-                    // ★ 非顶部模式：保持你原来的滚动行为
-                    int duration = (int) (mDuration / mSpeed * getLineSizeNum(newLyricsLineNum));
-                    int deltaY = getLineAtHeightY(newLyricsLineNum) - mScroller.getFinalY();
-                    mScroller.startScroll(0, mScroller.getFinalY(), 0, deltaY, duration);
-                    invalidateView();
+            if (mTouchEventStatus == TOUCHEVENTSTATUS_INIT && !mIsTopMode) {
+                // ★ 非顶部模式：计算滚动动画时长
+                final int lineJump = Math.abs(newLyricsLineNum - (lyricsLineNum < 0 ? 0 : lyricsLineNum));
+                final int duration;
+                if (lineJump <= 3) {
+                    // 正常逐行滚动：限制duration在合理范围内（最大1秒）
+                    int lineSizeNum = getLineSizeNum(newLyricsLineNum);
+                    duration = Math.min((int) (mDuration / mSpeed * lineSizeNum), 1000);
                 } else {
-                    // ★ 顶部模式：禁止触发 startScroll，维持顶部锚定
-                    mScroller.setFinalY((int) mOffsetY);
+                    // 大跳跃（快进/切歌等）：使用短动画，快速到位
+                    duration = 200;
                 }
+                final int targetY = getLineAtHeightY(newLyricsLineNum);
+                final int fromLine = lyricsLineNum;
+                final int toLine = newLyricsLineNum;
+
+                // ★ 关键修复：Scroller不是线程安全的，必须在主线程中调用startScroll
+                Log.d("ManyLyricsView", "[WorkerThread] scheduling startScroll: " + fromLine + "->" + toLine);
+                post(() -> {
+                    int currentY = mScroller.getFinalY();
+                    int deltaY = targetY - currentY;
+                    Log.d("ManyLyricsView", "[MainThread] startScroll: lineNum=" + fromLine + "->" + toLine
+                            + ", deltaY=" + deltaY + ", duration=" + duration
+                            + ", thread=" + Thread.currentThread().getName());
+                    mScroller.forceFinished(true);
+                    mScroller.startScroll(0, currentY, 0, deltaY, duration);
+                    mScrollLogCounter = 0;
+                    invalidate();
+                });
             }
             lyricsLineNum = newLyricsLineNum;
             setLyricsLineNum(lyricsLineNum);
@@ -920,7 +944,7 @@ public class ManyLyricsView extends AbstractLrcView {
     }
 
     /**
-     * 获取所在歌词行的高度
+     * 获取所在歌词行的高度（优化版：使用缓存）
      *
      * @param lyricsLineNum
      * @return
@@ -930,8 +954,40 @@ public class ManyLyricsView extends AbstractLrcView {
         if (lyricsLineNum < 0) {
             return 0;
         }
-        // 获取数据
+
         TreeMap<Integer, LyricsLineInfo> lrcLineInfos = getLrcLineInfos();
+        if (lrcLineInfos == null || lrcLineInfos.isEmpty()) {
+            return 0;
+        }
+
+        // 检查是否可以使用缓存
+        if (mLineHeightCacheValid && mLineHeightCache != null &&
+                lyricsLineNum < mLineHeightCache.length) {
+            return mLineHeightCache[lyricsLineNum];
+        }
+
+        // 重建缓存
+        buildLineHeightCache();
+
+        // 使用缓存
+        if (mLineHeightCache != null && lyricsLineNum < mLineHeightCache.length) {
+            return mLineHeightCache[lyricsLineNum];
+        }
+
+        return 0;
+    }
+
+    /**
+     * 构建行高度缓存
+     */
+    private void buildLineHeightCache() {
+        TreeMap<Integer, LyricsLineInfo> lrcLineInfos = getLrcLineInfos();
+        if (lrcLineInfos == null || lrcLineInfos.isEmpty()) {
+            mLineHeightCache = null;
+            mLineHeightCacheValid = false;
+            return;
+        }
+
         Paint paint = getPaint();
         Paint extraLrcPaint = getExtraLrcPaint();
         float spaceLineHeight = getSpaceLineHeight();
@@ -940,24 +996,39 @@ public class ManyLyricsView extends AbstractLrcView {
         List<LyricsLineInfo> translateLrcLineInfos = getTranslateLrcLineInfos();
         List<LyricsLineInfo> transliterationLrcLineInfos = getTransliterationLrcLineInfos();
 
+        int size = lrcLineInfos.size();
+        mLineHeightCache = new int[size + 1]; // 多一个用于存储总高度
+        mLineHeightCache[0] = 0;
+
         int lineAtHeightY = 0;
-        for (int i = 0; i < lyricsLineNum; i++) {
+        for (int i = 0; i < size; i++) {
+            mLineHeightCache[i] = lineAtHeightY;
+
             LyricsLineInfo lyricsLineInfo = lrcLineInfos.get(i);
             List<LyricsLineInfo> lyricsLineInfos = lyricsLineInfo.getSplitLyricsLineInfos();
             lineAtHeightY += (LyricsUtils.getTextHeight(paint) + spaceLineHeight) * lyricsLineInfos.size();
+
             if (extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLATELRC) {
-                if (translateLrcLineInfos != null && translateLrcLineInfos.size() > 0) {
+                if (translateLrcLineInfos != null && i < translateLrcLineInfos.size()) {
                     List<LyricsLineInfo> tempTranslateLrcLineInfos = translateLrcLineInfos.get(i).getSplitLyricsLineInfos();
                     lineAtHeightY += (LyricsUtils.getTextHeight(extraLrcPaint) + extraLrcSpaceLineHeight) * tempTranslateLrcLineInfos.size();
                 }
             } else if (extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLITERATIONLRC) {
-                if (transliterationLrcLineInfos != null && transliterationLrcLineInfos.size() > 0) {
+                if (transliterationLrcLineInfos != null && i < transliterationLrcLineInfos.size()) {
                     List<LyricsLineInfo> tempTransliterationLrcLineInfos = transliterationLrcLineInfos.get(i).getSplitLyricsLineInfos();
                     lineAtHeightY += (LyricsUtils.getTextHeight(extraLrcPaint) + extraLrcSpaceLineHeight) * tempTransliterationLrcLineInfos.size();
                 }
             }
         }
-        return lineAtHeightY;
+        mLineHeightCache[size] = lineAtHeightY;
+        mLineHeightCacheValid = true;
+    }
+
+    /**
+     * 使缓存失效（字体大小、额外歌词状态改变时调用）
+     */
+    private void invalidateLineHeightCache() {
+        mLineHeightCacheValid = false;
     }
 
     /**
@@ -1025,13 +1096,28 @@ public class ManyLyricsView extends AbstractLrcView {
         }
     }
 
+    // 用于减少日志输出频率
+    private int mScrollLogCounter = 0;
+    private static final int SCROLL_LOG_INTERVAL = 10; // 每10帧输出一次日志
+
     @Override
     public void computeScroll() {
         super.computeScroll();
         // 更新当前的Y轴偏移量
         if (mScroller.computeScrollOffset()) {
+            float oldOffsetY = mOffsetY;
             mOffsetY = mScroller.getCurrY();
+            // 减少日志频率：每10帧输出一次，或在动画开始/结束时输出
+            mScrollLogCounter++;
+            if (mScrollLogCounter >= SCROLL_LOG_INTERVAL || Math.abs(mOffsetY - oldOffsetY) > 50) {
+                Log.d("ManyLyricsView", "computeScroll: offsetY " + oldOffsetY + " -> " + mOffsetY
+                        + ", currY=" + mScroller.getCurrY() + ", finalY=" + mScroller.getFinalY()
+                        + ", isFinished=" + mScroller.isFinished());
+                mScrollLogCounter = 0;
+            }
             invalidateView();
+            // Android 12+ 兼容性：使用多种方式确保动画持续
+            postInvalidateOnAnimation();
         } else {
             if (mTouchEventStatus == TOUCHEVENTSTATUS_FLINGSCROLL) {
                 resetLrcView();
@@ -1092,6 +1178,7 @@ public class ManyLyricsView extends AbstractLrcView {
      * 初始歌词数据
      */
     public void initLrcData() {
+        Log.d("ManyLyricsView", "initLrcData: reset mIsTopMode to true, attached=" + isAttachedToWindow());
         mScroller.setFinalY(0);
         mOffsetY = 0;
         mCentreY = 0;
@@ -1099,6 +1186,7 @@ public class ManyLyricsView extends AbstractLrcView {
         setLyricsLineNum(0);
         mIsTopMode = true;  // ★ 开场启用顶部模式
         mTopAnchorInitialized = false;
+        invalidateLineHeightCache();  // 清除行高度缓存
         super.initLrcData();
     }
 
@@ -1171,6 +1259,7 @@ public class ManyLyricsView extends AbstractLrcView {
      * 重置scroller的finaly
      */
     private void resetScrollerFinalY() {
+        invalidateLineHeightCache();  // 字体/空行改变，缓存失效
         int lyricsLineNum = getLyricsLineNum();
         if (lyricsLineNum < 0) {
             lyricsLineNum = 0;
@@ -1261,6 +1350,7 @@ public class ManyLyricsView extends AbstractLrcView {
      * @param lyricsReader
      */
     public void setLyricsReader(LyricsReader lyricsReader) {
+        invalidateLineHeightCache();  // 清除行高度缓存
         super.setLyricsReader(lyricsReader);
         if (lyricsReader != null && lyricsReader.getLyricsType() == LyricsInfo.DYNAMIC) {
             int extraLrcType = getExtraLrcType();
@@ -1269,6 +1359,11 @@ public class ManyLyricsView extends AbstractLrcView {
                 super.setTranslateDrawType(AbstractLrcView.TRANSLATE_DRAW_TYPE_DYNAMIC);
             }
         }
+        // ★ 关键：重置行号为-1，确保下次updateView时一定会触发滚动动画
+        // 因为super.setLyricsReader()内部会调用updateView()并设置lyricsLineNum
+        // 如果不重置，后续play()触发的updateView()可能因为行号相同而不触发滚动
+        setLyricsLineNum(-1);
+        Log.d("ManyLyricsView", "setLyricsReader: reset lyricsLineNum to -1 for animation trigger");
     }
 
     /**
