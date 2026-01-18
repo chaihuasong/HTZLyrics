@@ -1204,7 +1204,9 @@ public class LyricsUtils {
     public static int getSplitLrcLyricsLineNum(TreeMap<Integer, LyricsLineInfo> mLrcLineInfos, int mLyricsLineNum, long playProgress, long playOffset) {
         if (mLrcLineInfos == null) return 0;
         LyricsLineInfo lyrLine = mLrcLineInfos.get(mLyricsLineNum);
+        if (lyrLine == null) return 0;
         List<LyricsLineInfo> lyricsLineInfos = lyrLine.getSplitLyricsLineInfos();
+        if (lyricsLineInfos == null) return 0;
         return getSplitLrcLyricsLineNum(lyricsLineInfos, playProgress, playOffset);
     }
 
