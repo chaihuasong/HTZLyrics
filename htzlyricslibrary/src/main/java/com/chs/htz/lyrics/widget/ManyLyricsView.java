@@ -919,12 +919,18 @@ public class ManyLyricsView extends AbstractLrcView {
         }
         // 获取数据
         TreeMap<Integer, LyricsLineInfo> lrcLineInfos = getLrcLineInfos();
+        if (lrcLineInfos == null) {
+            return 0;
+        }
         int extraLrcStatus = getExtraLrcStatus();
         List<LyricsLineInfo> translateLrcLineInfos = getTranslateLrcLineInfos();
         List<LyricsLineInfo> transliterationLrcLineInfos = getTransliterationLrcLineInfos();
 
         int lineSizeNum = 0;
         LyricsLineInfo lyricsLineInfo = lrcLineInfos.get(lyricsLineNum);
+        if (lyricsLineInfo == null) {
+            return 0;
+        }
         List<LyricsLineInfo> lyricsLineInfos = lyricsLineInfo.getSplitLyricsLineInfos();
         lineSizeNum += lyricsLineInfos.size();
 
