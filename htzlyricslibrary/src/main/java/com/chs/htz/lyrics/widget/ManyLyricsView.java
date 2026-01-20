@@ -1104,7 +1104,8 @@ public class ManyLyricsView extends AbstractLrcView {
 
     // 用于减少日志输出频率
     private int mScrollLogCounter = 0;
-    private static final int SCROLL_LOG_INTERVAL = 10; // 每10帧输出一次日志
+    private static final int SCROLL_LOG_INTERVAL = 100; // 每100帧输出一次日志（约1.6秒）
+    private static final float MIN_OFFSET_CHANGE = 5.0f; // 最小偏移变化阈值
 
     @Override
     public void computeScroll() {
@@ -1113,9 +1114,10 @@ public class ManyLyricsView extends AbstractLrcView {
         if (mScroller.computeScrollOffset()) {
             float oldOffsetY = mOffsetY;
             mOffsetY = mScroller.getCurrY();
-            // 减少日志频率：每10帧输出一次，或在动画开始/结束时输出
+            // 优化日志：只在有明显变化时输出（变化超过5像素，或每100帧输出一次且有变化超过1像素）
+            float offsetChange = Math.abs(mOffsetY - oldOffsetY);
             mScrollLogCounter++;
-            if (mScrollLogCounter >= SCROLL_LOG_INTERVAL || Math.abs(mOffsetY - oldOffsetY) > 50) {
+            if (offsetChange > 50 || (mScrollLogCounter >= SCROLL_LOG_INTERVAL && offsetChange > MIN_OFFSET_CHANGE)) {
                 Log.d("ManyLyricsView", "computeScroll: offsetY " + oldOffsetY + " -> " + mOffsetY
                         + ", currY=" + mScroller.getCurrY() + ", finalY=" + mScroller.getFinalY()
                         + ", isFinished=" + mScroller.isFinished());
