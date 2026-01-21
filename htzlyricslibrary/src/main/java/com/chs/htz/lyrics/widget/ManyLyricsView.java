@@ -932,6 +932,9 @@ public class ManyLyricsView extends AbstractLrcView {
             return 0;
         }
         List<LyricsLineInfo> lyricsLineInfos = lyricsLineInfo.getSplitLyricsLineInfos();
+        if (lyricsLineInfos == null) {
+            return 0;
+        }
         lineSizeNum += lyricsLineInfos.size();
 
         // 判断是否有翻译歌词或者音译歌词

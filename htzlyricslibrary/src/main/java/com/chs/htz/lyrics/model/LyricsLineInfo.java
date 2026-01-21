@@ -4,6 +4,7 @@ import android.text.TextUtils;
 
 import com.chs.htz.lyrics.utils.LrcTextUtils;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -47,6 +48,9 @@ public class LyricsLineInfo {
     private float[] mCumulativeWidths;
 
     public List<LyricsLineInfo> getSplitLyricsLineInfos() {
+        if (mSplitDynamicLrcLineInfos == null) {
+            return Collections.emptyList();
+        }
         return mSplitDynamicLrcLineInfos;
     }
 
