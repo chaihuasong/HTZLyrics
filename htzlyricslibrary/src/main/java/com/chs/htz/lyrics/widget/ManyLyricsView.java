@@ -343,7 +343,9 @@ public class ManyLyricsView extends AbstractLrcView {
 
             for (int i = 0; i < lrcLineInfos.size(); i++) {
                 LyricsLineInfo lineInfo = lrcLineInfos.get(i);
+                if (lineInfo == null) continue;
                 List<LyricsLineInfo> splits = lineInfo.getSplitLyricsLineInfos();
+                if (splits == null || splits.isEmpty()) continue;
                 int   hlSplit = (i == lyricsLineNum) ? splitLyricsLineNum   : -1;
                 int   hlWord  = (i == lyricsLineNum) ? splitLyricsWordIndex : -2;
                 float hlTime  = (i == lyricsLineNum) ? lyricsWordHLTime     : -1;
@@ -372,12 +374,28 @@ public class ManyLyricsView extends AbstractLrcView {
             return; // 顶部模式本帧已绘制完成
         }
 
-        // ========== 非顶部模式：保持原“当前行居中 + 上下分块绘制” ==========
+        // ========== 非顶部模式：保持原"当前行居中 + 上下分块绘制" ==========
+        // 空值检查：如果歌词数据为空，直接返回
+        if (lrcLineInfos == null || lrcLineInfos.isEmpty()) {
+            return;
+        }
+
+        // 边界检查：确保 lyricsLineNum 在有效范围内
+        if (lyricsLineNum >= lrcLineInfos.size()) {
+            lyricsLineNum = lrcLineInfos.size() - 1;
+        }
+
         mCentreY = centerY + curLineY - mOffsetY;
 
         // 画当前行
         LyricsLineInfo lyricsLineInfo = lrcLineInfos.get(lyricsLineNum);
+        if (lyricsLineInfo == null) {
+            return;
+        }
         List<LyricsLineInfo> splitLyricsLineInfos = lyricsLineInfo.getSplitLyricsLineInfos();
+        if (splitLyricsLineInfos == null || splitLyricsLineInfos.isEmpty()) {
+            return;
+        }
         float lineBottomY = drawDownLyrics(
                 canvas, paint, paintHL,
                 splitLyricsLineInfos,
@@ -389,7 +407,9 @@ public class ManyLyricsView extends AbstractLrcView {
         // 画当前行之后（向下）
         for (int i = lyricsLineNum + 1; i < lrcLineInfos.size(); i++) {
             LyricsLineInfo down = lrcLineInfos.get(i);
+            if (down == null) continue;
             List<LyricsLineInfo> splits = down.getSplitLyricsLineInfos();
+            if (splits == null || splits.isEmpty()) continue;
             lineBottomY = drawDownLyrics(
                     canvas, paint, paintHL,
                     splits,
@@ -403,17 +423,24 @@ public class ManyLyricsView extends AbstractLrcView {
         float lineTopY = mCentreY;
         for (int i = lyricsLineNum - 1; i >= 0; i--) {
             LyricsLineInfo up = lrcLineInfos.get(i);
+            if (up == null) continue;
             List<LyricsLineInfo> splits = up.getSplitLyricsLineInfos();
+            if (splits == null || splits.isEmpty()) continue;
             lineTopY = drawUpExtraLyrics(canvas, extraLrcPaint, splits, i, 0, lineTopY);
         }
 
         // 指示器与时间（原逻辑）
         if (mIsTouchIntercept || mTouchEventStatus != TOUCHEVENTSTATUS_INIT) {
             int scrollLrcLineNum = getScrollLrcLineNum(mOffsetY);
-            int startTime = lrcLineInfos.get(scrollLrcLineNum).getStartTime();
-            if (mIsDrawIndicator) drawIndicator(canvas, startTime);
-            if (mOnIndicatorListener != null) {
-                mOnIndicatorListener.indicatorVisibleToUser(true, startTime);
+            if (scrollLrcLineNum >= 0 && scrollLrcLineNum < lrcLineInfos.size()) {
+                LyricsLineInfo scrollLineInfo = lrcLineInfos.get(scrollLrcLineNum);
+                if (scrollLineInfo != null) {
+                    int startTime = scrollLineInfo.getStartTime();
+                    if (mIsDrawIndicator) drawIndicator(canvas, startTime);
+                    if (mOnIndicatorListener != null) {
+                        mOnIndicatorListener.indicatorVisibleToUser(true, startTime);
+                    }
+                }
             }
         } else {
             if (mOnIndicatorListener != null) {
