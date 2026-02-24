@@ -554,27 +554,33 @@ public class ManyLyricsView extends AbstractLrcView {
 
         if (extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLATELRC) {
             // 画翻译歌词
-            if (translateLrcLineInfos != null && translateLrcLineInfos.size() > 0) {
-                List<LyricsLineInfo> translateSplitLyricsLineInfos = translateLrcLineInfos.get(lyricsLineNum).getSplitLyricsLineInfos();
-                lineBottomY += extraLrcSpaceLineHeight - spaceLineHeight;
-                if (lyricsReader.getLyricsType() == LyricsInfo.DYNAMIC && extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLATELRC && translateDrawType == AbstractLrcView.TRANSLATE_DRAW_TYPE_DYNAMIC) {
-                    lineBottomY = drawDownLyrics(canvas, paint, paintHL, translateSplitLyricsLineInfos, extraSplitLyricsLineNum, extraSplitLyricsWordIndex, extraLrcSpaceLineHeight, translateLyricsWordHLTime, lineBottomY);
-                } else {
-                    int splitLyricsLineNum = -1;
-                    if (getTranslateDrawLrcColorType() == AbstractLrcView.TRANSLATE_DRAW_LRC_COLOR_HL) {
-                        splitLyricsLineNum = extraSplitLyricsLineNum;
+            if (translateLrcLineInfos != null && lyricsLineNum < translateLrcLineInfos.size()) {
+                LyricsLineInfo translateLine = translateLrcLineInfos.get(lyricsLineNum);
+                List<LyricsLineInfo> translateSplitLyricsLineInfos = translateLine != null ? translateLine.getSplitLyricsLineInfos() : null;
+                if (translateSplitLyricsLineInfos != null && !translateSplitLyricsLineInfos.isEmpty()) {
+                    lineBottomY += extraLrcSpaceLineHeight - spaceLineHeight;
+                    if (lyricsReader.getLyricsType() == LyricsInfo.DYNAMIC && extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLATELRC && translateDrawType == AbstractLrcView.TRANSLATE_DRAW_TYPE_DYNAMIC) {
+                        lineBottomY = drawDownLyrics(canvas, paint, paintHL, translateSplitLyricsLineInfos, extraSplitLyricsLineNum, extraSplitLyricsWordIndex, extraLrcSpaceLineHeight, translateLyricsWordHLTime, lineBottomY);
+                    } else {
+                        int splitLyricsLineNum = -1;
+                        if (getTranslateDrawLrcColorType() == AbstractLrcView.TRANSLATE_DRAW_LRC_COLOR_HL) {
+                            splitLyricsLineNum = extraSplitLyricsLineNum;
+                        }
+                        lineBottomY = drawDownLyrics(canvas, paint, paintHL, translateSplitLyricsLineInfos, splitLyricsLineNum, -2, extraLrcSpaceLineHeight, -1, lineBottomY);
                     }
-                    lineBottomY = drawDownLyrics(canvas, paint, paintHL, translateSplitLyricsLineInfos, splitLyricsLineNum, -2, extraLrcSpaceLineHeight, -1, lineBottomY);
+                    lineBottomY += spaceLineHeight - extraLrcSpaceLineHeight;
                 }
-                lineBottomY += spaceLineHeight - extraLrcSpaceLineHeight;
             }
         } else if (extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLITERATIONLRC) {
             // 画音译歌词
-            if (transliterationLrcLineInfos != null && transliterationLrcLineInfos.size() > 0) {
-                List<LyricsLineInfo> transliterationSplitLrcLineInfos = transliterationLrcLineInfos.get(lyricsLineNum).getSplitLyricsLineInfos();
-                lineBottomY += extraLrcSpaceLineHeight - spaceLineHeight;
-                lineBottomY = drawDownLyrics(canvas, paint, paintHL, transliterationSplitLrcLineInfos, extraSplitLyricsLineNum, extraSplitLyricsWordIndex, extraLrcSpaceLineHeight, lyricsWordHLTime, lineBottomY);
-                lineBottomY += spaceLineHeight - extraLrcSpaceLineHeight;
+            if (transliterationLrcLineInfos != null && lyricsLineNum < transliterationLrcLineInfos.size()) {
+                LyricsLineInfo transliterationLine = transliterationLrcLineInfos.get(lyricsLineNum);
+                List<LyricsLineInfo> transliterationSplitLrcLineInfos = transliterationLine != null ? transliterationLine.getSplitLyricsLineInfos() : null;
+                if (transliterationSplitLrcLineInfos != null && !transliterationSplitLrcLineInfos.isEmpty()) {
+                    lineBottomY += extraLrcSpaceLineHeight - spaceLineHeight;
+                    lineBottomY = drawDownLyrics(canvas, paint, paintHL, transliterationSplitLrcLineInfos, extraSplitLyricsLineNum, extraSplitLyricsWordIndex, extraLrcSpaceLineHeight, lyricsWordHLTime, lineBottomY);
+                    lineBottomY += spaceLineHeight - extraLrcSpaceLineHeight;
+                }
             }
         }
         return lineBottomY;
@@ -599,21 +605,27 @@ public class ManyLyricsView extends AbstractLrcView {
 
         if (extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLATELRC) {
             // 画翻译歌词
-            if (translateLrcLineInfos != null && translateLrcLineInfos.size() > 0) {
-                List<LyricsLineInfo> translateSplitLyricsLineInfos = translateLrcLineInfos.get(lyricsLineNum).getSplitLyricsLineInfos();
-                lineTopY -= (LyricsUtils.getTextHeight(paint) + spaceLineHeight);
-                lineTopY = drawUpLyrics(canvas, paint, translateSplitLyricsLineInfos, extraLrcSpaceLineHeight, lineTopY);
-                lineTopY -= (LyricsUtils.getTextHeight(paint) + extraLrcSpaceLineHeight);
-                lineTopY = drawUpLyrics(canvas, paint, splitLyricsLineInfos, spaceLineHeight, lineTopY);
+            if (translateLrcLineInfos != null && lyricsLineNum < translateLrcLineInfos.size()) {
+                LyricsLineInfo translateLine = translateLrcLineInfos.get(lyricsLineNum);
+                List<LyricsLineInfo> translateSplitLyricsLineInfos = translateLine != null ? translateLine.getSplitLyricsLineInfos() : null;
+                if (translateSplitLyricsLineInfos != null && !translateSplitLyricsLineInfos.isEmpty()) {
+                    lineTopY -= (LyricsUtils.getTextHeight(paint) + spaceLineHeight);
+                    lineTopY = drawUpLyrics(canvas, paint, translateSplitLyricsLineInfos, extraLrcSpaceLineHeight, lineTopY);
+                    lineTopY -= (LyricsUtils.getTextHeight(paint) + extraLrcSpaceLineHeight);
+                    lineTopY = drawUpLyrics(canvas, paint, splitLyricsLineInfos, spaceLineHeight, lineTopY);
+                }
             }
         } else if (extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLITERATIONLRC) {
             // 画音译歌词
-            if (transliterationLrcLineInfos != null && transliterationLrcLineInfos.size() > 0) {
-                List<LyricsLineInfo> transliterationSplitLrcLineInfos = transliterationLrcLineInfos.get(lyricsLineNum).getSplitLyricsLineInfos();
-                lineTopY -= (LyricsUtils.getTextHeight(paint) + spaceLineHeight);
-                lineTopY = drawUpLyrics(canvas, paint, transliterationSplitLrcLineInfos, extraLrcSpaceLineHeight, lineTopY);
-                lineTopY -= (LyricsUtils.getTextHeight(paint) + extraLrcSpaceLineHeight);
-                lineTopY = drawUpLyrics(canvas, paint, splitLyricsLineInfos, spaceLineHeight, lineTopY);
+            if (transliterationLrcLineInfos != null && lyricsLineNum < transliterationLrcLineInfos.size()) {
+                LyricsLineInfo transliterationLine = transliterationLrcLineInfos.get(lyricsLineNum);
+                List<LyricsLineInfo> transliterationSplitLrcLineInfos = transliterationLine != null ? transliterationLine.getSplitLyricsLineInfos() : null;
+                if (transliterationSplitLrcLineInfos != null && !transliterationSplitLrcLineInfos.isEmpty()) {
+                    lineTopY -= (LyricsUtils.getTextHeight(paint) + spaceLineHeight);
+                    lineTopY = drawUpLyrics(canvas, paint, transliterationSplitLrcLineInfos, extraLrcSpaceLineHeight, lineTopY);
+                    lineTopY -= (LyricsUtils.getTextHeight(paint) + extraLrcSpaceLineHeight);
+                    lineTopY = drawUpLyrics(canvas, paint, splitLyricsLineInfos, spaceLineHeight, lineTopY);
+                }
             }
         } else {
             lineTopY -= (LyricsUtils.getTextHeight(paint) + spaceLineHeight);
@@ -821,8 +833,12 @@ public class ManyLyricsView extends AbstractLrcView {
         newLyricsLineNum = Math.max(0, newLyricsLineNum);
         int splitLyricsLineNum = getSplitLyricsLineNum();
 
-        List<LyricsLineInfo> splitLyricsLineInfos = lrcLineInfos.get(newLyricsLineNum).getSplitLyricsLineInfos();
+        LyricsLineInfo lineInfo = lrcLineInfos.get(newLyricsLineNum);
+        if (lineInfo == null) return "";
+        List<LyricsLineInfo> splitLyricsLineInfos = lineInfo.getSplitLyricsLineInfos();
+        if (splitLyricsLineInfos == null || splitLyricsLineInfos.isEmpty()) return "";
         LyricsLineInfo lyricsLineInfo = splitLyricsLineInfos.get(0);
+        if (lyricsLineInfo == null) return "";
         String curLyrics = lyricsLineInfo.getLineLyrics();
         if (splitLyricsLineNum > 0 && splitLyricsLineNum < splitLyricsLineInfos.size()) {
             String lrcRightText = splitLyricsLineInfos.get(splitLyricsLineNum).getLineLyrics();
@@ -966,14 +982,24 @@ public class ManyLyricsView extends AbstractLrcView {
 
         // 判断是否有翻译歌词或者音译歌词
         if (extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLATELRC) {
-            if (translateLrcLineInfos != null && translateLrcLineInfos.size() > 0) {
-                List<LyricsLineInfo> tempTranslateLrcLineInfos = translateLrcLineInfos.get(lyricsLineNum).getSplitLyricsLineInfos();
-                lineSizeNum += tempTranslateLrcLineInfos.size();
+            if (translateLrcLineInfos != null && lyricsLineNum < translateLrcLineInfos.size()) {
+                LyricsLineInfo translateLineInfo = translateLrcLineInfos.get(lyricsLineNum);
+                if (translateLineInfo != null) {
+                    List<LyricsLineInfo> tempTranslateLrcLineInfos = translateLineInfo.getSplitLyricsLineInfos();
+                    if (tempTranslateLrcLineInfos != null) {
+                        lineSizeNum += tempTranslateLrcLineInfos.size();
+                    }
+                }
             }
         } else if (extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLITERATIONLRC) {
-            if (transliterationLrcLineInfos != null && transliterationLrcLineInfos.size() > 0) {
-                List<LyricsLineInfo> tempTransliterationLrcLineInfos = transliterationLrcLineInfos.get(lyricsLineNum).getSplitLyricsLineInfos();
-                lineSizeNum += tempTransliterationLrcLineInfos.size();
+            if (transliterationLrcLineInfos != null && lyricsLineNum < transliterationLrcLineInfos.size()) {
+                LyricsLineInfo transliterationLineInfo = transliterationLrcLineInfos.get(lyricsLineNum);
+                if (transliterationLineInfo != null) {
+                    List<LyricsLineInfo> tempTransliterationLrcLineInfos = transliterationLineInfo.getSplitLyricsLineInfos();
+                    if (tempTransliterationLrcLineInfos != null) {
+                        lineSizeNum += tempTransliterationLrcLineInfos.size();
+                    }
+                }
             }
         }
         return lineSizeNum;
@@ -1041,18 +1067,26 @@ public class ManyLyricsView extends AbstractLrcView {
             mLineHeightCache[i] = lineAtHeightY;
 
             LyricsLineInfo lyricsLineInfo = lrcLineInfos.get(i);
+            if (lyricsLineInfo == null) continue;
             List<LyricsLineInfo> lyricsLineInfos = lyricsLineInfo.getSplitLyricsLineInfos();
+            if (lyricsLineInfos == null || lyricsLineInfos.isEmpty()) continue;
             lineAtHeightY += (LyricsUtils.getTextHeight(paint) + spaceLineHeight) * lyricsLineInfos.size();
 
             if (extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLATELRC) {
                 if (translateLrcLineInfos != null && i < translateLrcLineInfos.size()) {
-                    List<LyricsLineInfo> tempTranslateLrcLineInfos = translateLrcLineInfos.get(i).getSplitLyricsLineInfos();
-                    lineAtHeightY += (LyricsUtils.getTextHeight(extraLrcPaint) + extraLrcSpaceLineHeight) * tempTranslateLrcLineInfos.size();
+                    LyricsLineInfo tLine = translateLrcLineInfos.get(i);
+                    List<LyricsLineInfo> tempTranslateLrcLineInfos = tLine != null ? tLine.getSplitLyricsLineInfos() : null;
+                    if (tempTranslateLrcLineInfos != null) {
+                        lineAtHeightY += (LyricsUtils.getTextHeight(extraLrcPaint) + extraLrcSpaceLineHeight) * tempTranslateLrcLineInfos.size();
+                    }
                 }
             } else if (extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLITERATIONLRC) {
                 if (transliterationLrcLineInfos != null && i < transliterationLrcLineInfos.size()) {
-                    List<LyricsLineInfo> tempTransliterationLrcLineInfos = transliterationLrcLineInfos.get(i).getSplitLyricsLineInfos();
-                    lineAtHeightY += (LyricsUtils.getTextHeight(extraLrcPaint) + extraLrcSpaceLineHeight) * tempTransliterationLrcLineInfos.size();
+                    LyricsLineInfo tLine = transliterationLrcLineInfos.get(i);
+                    List<LyricsLineInfo> tempTransliterationLrcLineInfos = tLine != null ? tLine.getSplitLyricsLineInfos() : null;
+                    if (tempTransliterationLrcLineInfos != null) {
+                        lineAtHeightY += (LyricsUtils.getTextHeight(extraLrcPaint) + extraLrcSpaceLineHeight) * tempTransliterationLrcLineInfos.size();
+                    }
                 }
             }
         }
@@ -1087,17 +1121,25 @@ public class ManyLyricsView extends AbstractLrcView {
         int lineHeight = 0;
         for (int i = 0; i < lrcLineInfos.size(); i++) {
             LyricsLineInfo lyricsLineInfo = lrcLineInfos.get(i);
+            if (lyricsLineInfo == null) continue;
             List<LyricsLineInfo> lyricsLineInfos = lyricsLineInfo.getSplitLyricsLineInfos();
+            if (lyricsLineInfos == null || lyricsLineInfos.isEmpty()) continue;
             lineHeight += (LyricsUtils.getTextHeight(paint) + spaceLineHeight) * lyricsLineInfos.size();
             if (extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLATELRC) {
-                if (translateLrcLineInfos != null && translateLrcLineInfos.size() > 0) {
-                    List<LyricsLineInfo> tempTranslateLrcLineInfos = translateLrcLineInfos.get(i).getSplitLyricsLineInfos();
-                    lineHeight += (LyricsUtils.getTextHeight(extraLrcPaint) + extraLrcSpaceLineHeight) * tempTranslateLrcLineInfos.size();
+                if (translateLrcLineInfos != null && i < translateLrcLineInfos.size()) {
+                    LyricsLineInfo tLine = translateLrcLineInfos.get(i);
+                    List<LyricsLineInfo> tempTranslateLrcLineInfos = tLine != null ? tLine.getSplitLyricsLineInfos() : null;
+                    if (tempTranslateLrcLineInfos != null) {
+                        lineHeight += (LyricsUtils.getTextHeight(extraLrcPaint) + extraLrcSpaceLineHeight) * tempTranslateLrcLineInfos.size();
+                    }
                 }
             } else if (extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLITERATIONLRC) {
-                if (transliterationLrcLineInfos != null && transliterationLrcLineInfos.size() > 0) {
-                    List<LyricsLineInfo> tempTransliterationLrcLineInfos = transliterationLrcLineInfos.get(i).getSplitLyricsLineInfos();
-                    lineHeight += (LyricsUtils.getTextHeight(extraLrcPaint) + extraLrcSpaceLineHeight) * tempTransliterationLrcLineInfos.size();
+                if (transliterationLrcLineInfos != null && i < transliterationLrcLineInfos.size()) {
+                    LyricsLineInfo tLine = transliterationLrcLineInfos.get(i);
+                    List<LyricsLineInfo> tempTransliterationLrcLineInfos = tLine != null ? tLine.getSplitLyricsLineInfos() : null;
+                    if (tempTransliterationLrcLineInfos != null) {
+                        lineHeight += (LyricsUtils.getTextHeight(extraLrcPaint) + extraLrcSpaceLineHeight) * tempTransliterationLrcLineInfos.size();
+                    }
                 }
             }
             if (lineHeight > offsetY) {
