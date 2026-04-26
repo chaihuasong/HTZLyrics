@@ -903,7 +903,14 @@ public abstract class AbstractLrcView extends View {
     }
 
     private long getUpdateTime() {
+        if (mLrcPlayerStatus == LRCPLAYERSTATUS_PLAY) {
+            return mCurPlayingTime + (long) ((System.currentTimeMillis() - mPlayerStartTime) * getSafeSpeed());
+        }
         return mCurPlayingTime;
+    }
+
+    private float getSafeSpeed() {
+        return mSpeed > 0 ? mSpeed : 1.0f;
     }
 
     public void updateProgress(long progress) {
@@ -945,10 +952,10 @@ public abstract class AbstractLrcView extends View {
     public void pause() {
         synchronized (lock) {
             if (mLrcPlayerStatus == LRCPLAYERSTATUS_PLAY) {
+                mCurPlayingTime = getUpdateTime();
                 mLrcPlayerStatus = LRCPLAYERSTATUS_INIT;
                 removeCallbacksAndMessages();
             }
-            mCurPlayingTime += mPlayerSpendTime;
             mPlayerSpendTime = 0;
         }
     }

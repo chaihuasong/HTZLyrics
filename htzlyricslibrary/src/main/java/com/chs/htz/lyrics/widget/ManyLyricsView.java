@@ -105,6 +105,7 @@ public class ManyLyricsView extends AbstractLrcView {
      * Y轴移动的时间
      */
     private int mDuration = 500;
+    private volatile int mScrollAnimationToken = 0;
 
     ///////////////////////////////////////////////////
     /**
@@ -799,25 +800,46 @@ public class ManyLyricsView extends AbstractLrcView {
                 final int fromLine = lyricsLineNum;
                 final int toLine = newLyricsLineNum;
 
-                // ★ 关键修复：Scroller不是线程安全的，必须在主线程中调用startScroll
-                Log.d("ManyLyricsView", "[WorkerThread] scheduling startScroll: " + fromLine + "->" + toLine);
-                post(() -> {
-                    int currentY = mScroller.getFinalY();
-                    int deltaY = targetY - currentY;
-                    Log.d("ManyLyricsView", "[MainThread] startScroll: lineNum=" + fromLine + "->" + toLine
-                            + ", deltaY=" + deltaY + ", duration=" + duration
-                            + ", thread=" + Thread.currentThread().getName());
-                    mScroller.forceFinished(true);
-                    mScroller.startScroll(0, currentY, 0, deltaY, duration);
-                    mScrollLogCounter = 0;
-                    invalidate();
-                });
+                startLineScroll(targetY, duration, fromLine, toLine);
             }
             lyricsLineNum = newLyricsLineNum;
             setLyricsLineNum(lyricsLineNum);
         }
 
         updateSplitData(playProgress);
+    }
+
+    private void startLineScroll(final int targetY, final int duration, final int fromLine, final int toLine) {
+        final int token = ++mScrollAnimationToken;
+        post(() -> {
+            if (token != mScrollAnimationToken || mTouchEventStatus != TOUCHEVENTSTATUS_INIT || mIsTouchIntercept) {
+                return;
+            }
+            int currentY = getCurrentScrollY();
+            int deltaY = targetY - currentY;
+            if (Math.abs(deltaY) <= 1) {
+                mScroller.forceFinished(true);
+                mOffsetY = targetY;
+                mScroller.setFinalY(targetY);
+                invalidate();
+                return;
+            }
+            Log.d("ManyLyricsView", "startLineScroll: lineNum=" + fromLine + "->" + toLine
+                    + ", currentY=" + currentY + ", targetY=" + targetY
+                    + ", deltaY=" + deltaY + ", duration=" + duration);
+            mScroller.forceFinished(true);
+            mOffsetY = currentY;
+            mScroller.startScroll(0, currentY, 0, deltaY, duration);
+            mScrollLogCounter = 0;
+            postInvalidateOnAnimation();
+        });
+    }
+
+    private int getCurrentScrollY() {
+        if (!mScroller.isFinished() && mScroller.computeScrollOffset()) {
+            return mScroller.getCurrY();
+        }
+        return Math.round(mOffsetY);
     }
 
     /**
@@ -1259,6 +1281,8 @@ public class ManyLyricsView extends AbstractLrcView {
      */
     public void initLrcData() {
         Log.d("ManyLyricsView", "initLrcData: reset mIsTopMode to true, attached=" + isAttachedToWindow());
+        mScrollAnimationToken++;
+        mScroller.forceFinished(true);
         mScroller.setFinalY(0);
         mOffsetY = 0;
         mCentreY = 0;
@@ -1339,6 +1363,8 @@ public class ManyLyricsView extends AbstractLrcView {
      * 重置scroller的finaly
      */
     private void resetScrollerFinalY() {
+        mScrollAnimationToken++;
+        mScroller.forceFinished(true);
         invalidateLineHeightCache();  // 字体/空行改变，缓存失效
         int lyricsLineNum = getLyricsLineNum();
         if (lyricsLineNum < 0) {
