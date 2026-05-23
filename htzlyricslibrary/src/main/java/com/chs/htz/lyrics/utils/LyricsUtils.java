@@ -564,15 +564,40 @@ public class LyricsUtils {
     }
 
     /**
-     * 缓存上次查询的行号，用于优化查询性能
+     * 缓存上次查询的行号，按歌词刷新线程隔离，避免多视图互相污染
      */
-    private static int sLastLineNumber = 0;
+    private static final class LineNumberCache {
+        int lastLineNumber = 0;
+        long lastPlayingTime = -1;
+        int cacheTreeIdentity = 0;
+    }
+
+    private static final ThreadLocal<LineNumberCache> sLineNumberCache =
+            ThreadLocal.withInitial(LineNumberCache::new);
 
     /**
      * 重置行号缓存（切换歌曲时调用）
      */
     public static void resetLineNumberCache() {
-        sLastLineNumber = 0;
+        LineNumberCache cache = sLineNumberCache.get();
+        cache.lastLineNumber = 0;
+        cache.lastPlayingTime = -1;
+        cache.cacheTreeIdentity = 0;
+    }
+
+    private static LineNumberCache getLineNumberCache(TreeMap<Integer, LyricsLineInfo> lyricsLineTreeMap,
+                                                      long newPlayingTime) {
+        LineNumberCache cache = sLineNumberCache.get();
+        int treeIdentity = System.identityHashCode(lyricsLineTreeMap);
+        if (treeIdentity != cache.cacheTreeIdentity) {
+            cache.lastLineNumber = 0;
+            cache.cacheTreeIdentity = treeIdentity;
+            cache.lastPlayingTime = -1;
+        } else if (cache.lastPlayingTime >= 0 && newPlayingTime < cache.lastPlayingTime - 300) {
+            cache.lastLineNumber = 0;
+        }
+        cache.lastPlayingTime = newPlayingTime;
+        return cache;
     }
 
     /**
@@ -591,18 +616,19 @@ public class LyricsUtils {
         int size = lyricsLineTreeMap.size();
         //添加歌词增量
         long newPlayingTime = curPlayingTime + playOffset;
+        LineNumberCache cache = getLineNumberCache(lyricsLineTreeMap, newPlayingTime);
 
         // 确保缓存行号在有效范围内
-        if (sLastLineNumber < 0 || sLastLineNumber >= size) {
-            sLastLineNumber = 0;
+        if (cache.lastLineNumber < 0 || cache.lastLineNumber >= size) {
+            cache.lastLineNumber = 0;
         }
 
         if (lyricsType == LyricsInfo.LRC) {
             // LRC歌词：优化查询，从上次行号开始
-            return getLineNumberLrc(lyricsLineTreeMap, newPlayingTime, size);
+            return getLineNumberLrc(lyricsLineTreeMap, newPlayingTime, size, cache);
         } else if (lyricsType == LyricsInfo.DYNAMIC) {
             // 动感歌词：优化查询，从上次行号开始
-            return getLineNumberDynamic(lyricsLineTreeMap, newPlayingTime, size);
+            return getLineNumberDynamic(lyricsLineTreeMap, newPlayingTime, size, cache);
         }
         return 0;
     }
@@ -610,32 +636,33 @@ public class LyricsUtils {
     /**
      * LRC歌词行号查询优化
      */
-    private static int getLineNumberLrc(TreeMap<Integer, LyricsLineInfo> lyricsLineTreeMap, long newPlayingTime, int size) {
+    private static int getLineNumberLrc(TreeMap<Integer, LyricsLineInfo> lyricsLineTreeMap, long newPlayingTime, int size,
+                                      LineNumberCache cache) {
         // 快速检查：当前时间是否在上次行号范围内
-        LyricsLineInfo lastLine = lyricsLineTreeMap.get(sLastLineNumber);
+        LyricsLineInfo lastLine = lyricsLineTreeMap.get(cache.lastLineNumber);
         if (lastLine != null) {
             long startTime = lastLine.getStartTime();
-            long nextStartTime = (sLastLineNumber + 1 < size) ?
-                    lyricsLineTreeMap.get(sLastLineNumber + 1).getStartTime() : Long.MAX_VALUE;
+            long nextStartTime = (cache.lastLineNumber + 1 < size) ?
+                    lyricsLineTreeMap.get(cache.lastLineNumber + 1).getStartTime() : Long.MAX_VALUE;
 
             if (newPlayingTime >= startTime && newPlayingTime < nextStartTime) {
-                return sLastLineNumber;
+                return cache.lastLineNumber;
             }
 
             // 检查是否是下一行
-            if (sLastLineNumber + 1 < size && newPlayingTime >= nextStartTime) {
-                long nextNextStartTime = (sLastLineNumber + 2 < size) ?
-                        lyricsLineTreeMap.get(sLastLineNumber + 2).getStartTime() : Long.MAX_VALUE;
+            if (cache.lastLineNumber + 1 < size && newPlayingTime >= nextStartTime) {
+                long nextNextStartTime = (cache.lastLineNumber + 2 < size) ?
+                        lyricsLineTreeMap.get(cache.lastLineNumber + 2).getStartTime() : Long.MAX_VALUE;
                 if (newPlayingTime < nextNextStartTime) {
-                    sLastLineNumber = sLastLineNumber + 1;
-                    return sLastLineNumber;
+                    cache.lastLineNumber = cache.lastLineNumber + 1;
+                    return cache.lastLineNumber;
                 }
             }
         }
 
         // 时间在第一行之前
         if (newPlayingTime < lyricsLineTreeMap.get(0).getStartTime()) {
-            sLastLineNumber = 0;
+            cache.lastLineNumber = 0;
             return 0;
         }
 
@@ -656,37 +683,38 @@ public class LyricsUtils {
             }
         }
 
-        sLastLineNumber = result;
+        cache.lastLineNumber = result;
         return result;
     }
 
     /**
      * 动感歌词行号查询优化
      */
-    private static int getLineNumberDynamic(TreeMap<Integer, LyricsLineInfo> lyricsLineTreeMap, long newPlayingTime, int size) {
+    private static int getLineNumberDynamic(TreeMap<Integer, LyricsLineInfo> lyricsLineTreeMap, long newPlayingTime, int size,
+                                            LineNumberCache cache) {
         // 快速检查：当前时间是否在上次行号范围内
-        LyricsLineInfo lastLine = lyricsLineTreeMap.get(sLastLineNumber);
+        LyricsLineInfo lastLine = lyricsLineTreeMap.get(cache.lastLineNumber);
         if (lastLine != null) {
             long startTime = lastLine.getStartTime();
             long endTime = lastLine.getEndTime();
 
             // 在当前行的时间范围内
             if (newPlayingTime >= startTime && newPlayingTime <= endTime) {
-                return sLastLineNumber;
+                return cache.lastLineNumber;
             }
 
             // 在当前行结束和下一行开始之间（间隙）
-            if (sLastLineNumber + 1 < size) {
-                long nextStartTime = lyricsLineTreeMap.get(sLastLineNumber + 1).getStartTime();
+            if (cache.lastLineNumber + 1 < size) {
+                long nextStartTime = lyricsLineTreeMap.get(cache.lastLineNumber + 1).getStartTime();
                 if (newPlayingTime > endTime && newPlayingTime <= nextStartTime) {
-                    return sLastLineNumber;
+                    return cache.lastLineNumber;
                 }
 
                 // 检查下一行
-                LyricsLineInfo nextLine = lyricsLineTreeMap.get(sLastLineNumber + 1);
+                LyricsLineInfo nextLine = lyricsLineTreeMap.get(cache.lastLineNumber + 1);
                 if (newPlayingTime >= nextLine.getStartTime() && newPlayingTime <= nextLine.getEndTime()) {
-                    sLastLineNumber = sLastLineNumber + 1;
-                    return sLastLineNumber;
+                    cache.lastLineNumber = cache.lastLineNumber + 1;
+                    return cache.lastLineNumber;
                 }
             }
         }
@@ -694,7 +722,7 @@ public class LyricsUtils {
         // 已经过了最后一行
         LyricsLineInfo lastLineInfo = lyricsLineTreeMap.get(size - 1);
         if (newPlayingTime >= lastLineInfo.getEndTime()) {
-            sLastLineNumber = size - 1;
+            cache.lastLineNumber = size - 1;
             return size - 1;
         }
 
@@ -711,7 +739,7 @@ public class LyricsUtils {
                 result = mid;
                 if (newPlayingTime <= midLine.getEndTime()) {
                     // 找到精确匹配
-                    sLastLineNumber = mid;
+                    cache.lastLineNumber = mid;
                     return mid;
                 }
                 low = mid + 1;
@@ -720,7 +748,7 @@ public class LyricsUtils {
             }
         }
 
-        sLastLineNumber = result;
+        cache.lastLineNumber = result;
         return result;
     }
 

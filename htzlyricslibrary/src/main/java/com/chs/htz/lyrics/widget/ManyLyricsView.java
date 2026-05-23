@@ -759,8 +759,10 @@ public class ManyLyricsView extends AbstractLrcView {
         Log.d("ManyLyricsView", "play called: progress=" + playProgress
                 + ", mIsTopMode=" + mIsTopMode + ", attached=" + isAttachedToWindow()
                 + ", visibility=" + getVisibility() + ", width=" + getWidth() + ", height=" + getHeight());
-        // ★ 关键：播放时自动禁用顶部模式，确保滚动动画正常工作
-        mIsTopMode = false;
+        // 顶部锚点未就绪时不强制退出顶部模式，避免首帧布局切换导致跳变
+        if (mTopAnchorInitialized) {
+            mIsTopMode = false;
+        }
         super.play(playProgress);
     }
 

@@ -466,7 +466,7 @@ public abstract class AbstractLrcView extends View {
                     synchronized (lock) {
                         if (mLrcPlayerStatus == LRCPLAYERSTATUS_PLAY && mLyricsReader != null) {
                             invalidateView();
-                            long endTime = System.currentTimeMillis();
+                            long endTime = SystemClock.elapsedRealtime();
                             long updateTime = (endTime - mPlayerStartTime) - mPlayerSpendTime;
                             mPlayerSpendTime = (endTime - mPlayerStartTime);
                             long delayMs = mRefreshTime - updateTime;
@@ -904,7 +904,7 @@ public abstract class AbstractLrcView extends View {
 
     private long getUpdateTime() {
         if (mLrcPlayerStatus == LRCPLAYERSTATUS_PLAY) {
-            return mCurPlayingTime + (long) ((System.currentTimeMillis() - mPlayerStartTime) * getSafeSpeed());
+            return mCurPlayingTime + (long) ((SystemClock.elapsedRealtime() - mPlayerStartTime) * getSafeSpeed());
         }
         return mCurPlayingTime;
     }
@@ -918,12 +918,12 @@ public abstract class AbstractLrcView extends View {
             if (mLrcPlayerStatus == LRCPLAYERSTATUS_PLAY) {
                 long currentProgress = getUpdateTime();
                 long drift = progress - currentProgress;
-                if (drift <= 0 || Math.abs(drift) < 1000) {
+                if (Math.abs(drift) < 300) {
                     return;
                 }
             }
             this.mCurPlayingTime = progress;
-            mPlayerStartTime = System.currentTimeMillis();
+            mPlayerStartTime = SystemClock.elapsedRealtime();
             mPlayerSpendTime = 0;
         }
     }
@@ -945,11 +945,15 @@ public abstract class AbstractLrcView extends View {
     public void play(int playProgress) {
         synchronized (lock) {
             if (mLrcPlayerStatus == LRCPLAYERSTATUS_PLAY) {
+                long drift = playProgress - getUpdateTime();
+                if (Math.abs(drift) < 300) {
+                    return;
+                }
                 removeCallbacksAndMessages();
             }
             mLrcPlayerStatus = LRCPLAYERSTATUS_PLAY;
             this.mCurPlayingTime = playProgress;
-            mPlayerStartTime = System.currentTimeMillis();
+            mPlayerStartTime = SystemClock.elapsedRealtime();
             mPlayerSpendTime = 0;
             mWorkerHandler.sendEmptyMessageDelayed(0, 0);
         }
@@ -982,7 +986,7 @@ public abstract class AbstractLrcView extends View {
                 mLrcPlayerStatus = LRCPLAYERSTATUS_SEEKTO;
 
                 this.mCurPlayingTime = playProgress;
-                mPlayerStartTime = System.currentTimeMillis();
+                mPlayerStartTime = SystemClock.elapsedRealtime();
                 mPlayerSpendTime = 0;
                 mWorkerHandler.sendEmptyMessageDelayed(0, 0);
             }
@@ -995,7 +999,7 @@ public abstract class AbstractLrcView extends View {
     public void resume() {
         synchronized (lock) {
             mLrcPlayerStatus = LRCPLAYERSTATUS_PLAY;
-            mPlayerStartTime = System.currentTimeMillis();
+            mPlayerStartTime = SystemClock.elapsedRealtime();
             mPlayerSpendTime = 0;
             mWorkerHandler.sendEmptyMessageDelayed(0, 0);
         }
