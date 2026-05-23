@@ -123,8 +123,21 @@ public class FloatLyricsView extends AbstractLrcView {
 
 
         // 先设置当前歌词，之后再根据索引判断是否放在左边还是右边
-        List<LyricsLineInfo> splitLyricsLineInfos = lrcLineInfos.get(lyricsLineNum).getSplitLyricsLineInfos();
+        if (lyricsReader == null || lrcLineInfos == null || lrcLineInfos.isEmpty()) {
+            return;
+        }
+        LyricsLineInfo curLineInfo = lrcLineInfos.get(lyricsLineNum);
+        if (curLineInfo == null) {
+            return;
+        }
+        List<LyricsLineInfo> splitLyricsLineInfos = curLineInfo.getSplitLyricsLineInfos();
+        if (splitLyricsLineInfos == null || splitLyricsLineInfos.isEmpty()) {
+            return;
+        }
         LyricsLineInfo lyricsLineInfo = splitLyricsLineInfos.get(0);
+        if (lyricsLineInfo == null) {
+            return;
+        }
         //获取行歌词高亮宽度
         float lineLyricsHLWidth = LyricsUtils.getLineLyricsHLWidth(lyricsReader.getLyricsType(), paint, lyricsLineInfo, splitLyricsWordIndex, lyricsWordHLTime);
         // 当行歌词
@@ -134,7 +147,6 @@ public class FloatLyricsView extends AbstractLrcView {
         float textX = 0;
         // 当前歌词行的y坐标
         float textY = 0;
-        int splitLyricsRealLineNum = LyricsUtils.getSplitLyricsRealLineNum(lrcLineInfos, lyricsLineNum, splitLyricsLineNum);
         float topPadding = (getHeight() - spaceLineHeight - 2 * LyricsUtils.getTextHeight(paint)) / 2;
         if (mOrientation == ORIENTATION_LEFT) {
             textX = paddingLeftOrRight;
@@ -148,22 +160,24 @@ public class FloatLyricsView extends AbstractLrcView {
 
             // 画下一句的歌词，该下一句还在该行的分割集合里面
             if (splitLyricsLineNum < splitLyricsLineInfos.size()) {
-                String lrcRightText = splitLyricsLineInfos.get(
-                        splitLyricsLineNum).getLineLyrics();
-                float lrcRightTextWidth = LyricsUtils.getTextWidth(paint, lrcRightText);
-                float textRightX = 0;
+                LyricsLineInfo nextLineInfo = splitLyricsLineInfos.get(splitLyricsLineNum);
+                if (nextLineInfo != null) {
+                    String lrcRightText = nextLineInfo.getLineLyrics();
+                    float lrcRightTextWidth = LyricsUtils.getTextWidth(paint, lrcRightText);
+                    float textRightX = 0;
 
-                if (mOrientation == ORIENTATION_LEFT) {
-                    textRightX = getWidth() - lrcRightTextWidth - paddingLeftOrRight;
-                } else {
-                    textRightX = (getWidth() - lrcRightTextWidth) / 2;
+                    if (mOrientation == ORIENTATION_LEFT) {
+                        textRightX = getWidth() - lrcRightTextWidth - paddingLeftOrRight;
+                    } else {
+                        textRightX = (getWidth() - lrcRightTextWidth) / 2;
+                    }
+
+                    //android.util.Log.d("huasong", "lrcRightText:" + lrcRightText + " textY:" + textY + " nextLrcTextY:" + nextLrcTextY);
+
+                    LyricsUtils.drawOutline(canvas, paintOutline, lrcRightText, textRightX, nextLrcTextY);
+                    LyricsUtils.drawText(canvas, paintHL, paintHLColors, lrcRightText, textRightX,
+                            nextLrcTextY);
                 }
-
-                //android.util.Log.d("huasong", "lrcRightText:" + lrcRightText + " textY:" + textY + " nextLrcTextY:" + nextLrcTextY);
-
-                LyricsUtils.drawOutline(canvas, paintOutline, lrcRightText, textRightX, nextLrcTextY);
-                LyricsUtils.drawText(canvas, paintHL, paintHLColors, lrcRightText, textRightX,
-                        nextLrcTextY);
             }
         }
         //画歌词
@@ -201,6 +215,14 @@ public class FloatLyricsView extends AbstractLrcView {
         List<LyricsLineInfo> translateLrcLineInfos = getTranslateLrcLineInfos();
         List<LyricsLineInfo> transliterationLrcLineInfos = getTransliterationLrcLineInfos();
 
+        if (lyricsReader == null || lrcLineInfos == null || lrcLineInfos.isEmpty()) {
+            return;
+        }
+        LyricsLineInfo lyricsLineInfo = lrcLineInfos.get(lyricsLineNum);
+        if (lyricsLineInfo == null) {
+            return;
+        }
+
         //
         float topPadding = (getHeight() - extraLrcSpaceLineHeight - LyricsUtils.getTextHeight(paint) - LyricsUtils.getTextHeight(extraLrcPaint)) / 2;
         // 当前歌词行的y坐标
@@ -208,7 +230,6 @@ public class FloatLyricsView extends AbstractLrcView {
         //额外歌词行的y坐标
         float extraLrcTextY = lrcTextY + extraLrcSpaceLineHeight + LyricsUtils.getTextHeight(extraLrcPaint);
 
-        LyricsLineInfo lyricsLineInfo = lrcLineInfos.get(lyricsLineNum);
         //获取行歌词高亮宽度
         float lineLyricsHLWidth = LyricsUtils.getLineLyricsHLWidth(lyricsReader.getLyricsType(), paint, lyricsLineInfo, lyricsWordIndex, lyricsWordHLTime);
         //画默认歌词
@@ -217,13 +238,25 @@ public class FloatLyricsView extends AbstractLrcView {
         //显示翻译歌词
         if (lyricsReader.getLyricsType() == LyricsInfo.DYNAMIC && extraLrcStatus == AbstractLrcView.EXTRALRCSTATUS_SHOWTRANSLATELRC && translateDrawType == AbstractLrcView.TRANSLATE_DRAW_TYPE_DYNAMIC) {
 
+            if (translateLrcLineInfos == null || lyricsLineNum >= translateLrcLineInfos.size()) {
+                return;
+            }
             LyricsLineInfo translateLyricsLineInfo = translateLrcLineInfos.get(lyricsLineNum);
+            if (translateLyricsLineInfo == null) {
+                return;
+            }
             float extraLyricsLineHLWidth = LyricsUtils.getLineLyricsHLWidth(lyricsReader.getLyricsType(), extraLrcPaint, translateLyricsLineInfo, extraLyricsWordIndex, translateLyricsWordHLTime);
             //画翻译歌词
             LyricsUtils.drawDynamiLyrics(canvas, lyricsReader.getLyricsType(), extraLrcPaint, extraLrcPaintHL, extraLrcPaintOutline, translateLyricsLineInfo, extraLyricsLineHLWidth, getWidth(), extraLyricsWordIndex, translateLyricsWordHLTime, extraLrcTextY, paddingLeftOrRight, paintColors, paintHLColors);
 
         } else {
+            if (transliterationLrcLineInfos == null || lyricsLineNum >= transliterationLrcLineInfos.size()) {
+                return;
+            }
             LyricsLineInfo transliterationLineInfo = transliterationLrcLineInfos.get(lyricsLineNum);
+            if (transliterationLineInfo == null) {
+                return;
+            }
             float extraLyricsLineHLWidth = LyricsUtils.getLineLyricsHLWidth(lyricsReader.getLyricsType(), extraLrcPaint, transliterationLineInfo, extraLyricsWordIndex, lyricsWordHLTime);
             //画音译歌词
             LyricsUtils.drawDynamiLyrics(canvas, lyricsReader.getLyricsType(), extraLrcPaint, extraLrcPaintHL, extraLrcPaintOutline, transliterationLineInfo, extraLyricsLineHLWidth, getWidth(), extraLyricsWordIndex, lyricsWordHLTime, extraLrcTextY, paddingLeftOrRight, paintColors, paintHLColors);
@@ -241,7 +274,13 @@ public class FloatLyricsView extends AbstractLrcView {
     private void updateFloatLrcView(long playProgress) {
         LyricsReader lyricsReader = getLyricsReader();
         TreeMap<Integer, LyricsLineInfo> lrcLineInfos = getLrcLineInfos();
+        if (lyricsReader == null || lrcLineInfos == null || lrcLineInfos.isEmpty()) {
+            return;
+        }
         int lyricsLineNum = LyricsUtils.getLineNumber(lyricsReader.getLyricsType(), lrcLineInfos, playProgress, lyricsReader.getPlayOffset());
+        if (lrcLineInfos.get(lyricsLineNum) == null) {
+            return;
+        }
         setLyricsLineNum(lyricsLineNum);
         updateSplitData(playProgress);
     }

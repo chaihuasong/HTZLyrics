@@ -914,9 +914,18 @@ public abstract class AbstractLrcView extends View {
     }
 
     public void updateProgress(long progress) {
-        this.mCurPlayingTime = progress;
-        mPlayerStartTime = System.currentTimeMillis();
-        mPlayerSpendTime = 0;
+        synchronized (lock) {
+            if (mLrcPlayerStatus == LRCPLAYERSTATUS_PLAY) {
+                long currentProgress = getUpdateTime();
+                long drift = progress - currentProgress;
+                if (drift <= 0 || Math.abs(drift) < 1000) {
+                    return;
+                }
+            }
+            this.mCurPlayingTime = progress;
+            mPlayerStartTime = System.currentTimeMillis();
+            mPlayerSpendTime = 0;
+        }
     }
 
     /**
