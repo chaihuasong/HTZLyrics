@@ -912,16 +912,24 @@ public class ManyLyricsView extends AbstractLrcView {
             case MotionEvent.ACTION_UP:
                 if (isInPlayBtnRect) {
                     mHandler.removeMessages(RESETLRCVIEW);
-                    if (mOnLrcClickListener != null) {
-                        int scrollLrcLineNum = getScrollLrcLineNum(mOffsetY);
-                        TreeMap<Integer, LyricsLineInfo> lrcLineInfos = getLrcLineInfos();
-                        int startTime = lrcLineInfos.get(scrollLrcLineNum).getStartTime();
-                        mOnLrcClickListener.onLrcPlayClicked(startTime + 100);
-                    }
+                    int scrollLrcLineNum = getScrollLrcLineNum(mOffsetY);
+                    // 先复位触摸状态再回调：回调里的 seekto 会在子线程更新歌词行，
+                    // 若此时 mIsTouchIntercept 仍为 true，updateManyLrcView 会直接 return，跳转就丢了
                     mIsTouchIntercept = false;
                     mTouchEventStatus = TOUCHEVENTSTATUS_INIT;
                     isInPlayBtnRect = false;
+                    // 非播放状态下 seekto 不会退出顶部模式，视图仍从第一行画起，看不到跳转效果
+                    if (mTopAnchorInitialized) {
+                        mIsTopMode = false;
+                    }
                     invalidateView();
+                    if (mOnLrcClickListener != null) {
+                        TreeMap<Integer, LyricsLineInfo> lrcLineInfos = getLrcLineInfos();
+                        LyricsLineInfo scrollLineInfo = lrcLineInfos == null ? null : lrcLineInfos.get(scrollLrcLineNum);
+                        if (scrollLineInfo != null) {
+                            mOnLrcClickListener.onLrcPlayClicked(scrollLineInfo.getStartTime() + 100);
+                        }
+                    }
                 } else {
                     final VelocityTracker velocityTracker = mVelocityTracker;
                     velocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);
